@@ -1,6 +1,110 @@
 import numpy as np
 from scipy.linalg import toeplitz, cholesky
 
+
+def simulate_gaussian_process_new(r_func, T, dt, *args, **kwargs):
+    """
+    Simulates a zero-mean stationary Gaussian process {X(t)} of duration T,
+    sampled at step dt, with correlation function r_func(tau, *args, **kwargs).
+    Uses an FFT-based approach (circulant embedding) with correct scaling.
+    
+    Parameters
+    ----------
+    r_func : callable
+        The correlation function r(tau) of the process. Must accept
+        (tau, *args, **kwargs).
+    T : float
+        Total simulation time.
+    dt : float
+        Time step.
+    *args :
+        Additional positional arguments passed to r_func.
+    **kwargs :
+        Additional keyword arguments passed to r_func.
+    
+    Returns
+    -------
+    t : ndarray of shape (N,)
+        Array of time points of length N = int(T/dt).
+    x : ndarray of shape (N,)
+        Simulated Gaussian process values at times in t.
+    """
+    # 1) Basic discretization
+    N = int(round(T / dt)) 
+    t = np.arange(N) * dt  # times 0..(N-1)*dt
+    
+    # 2) Build discrete correlation array: r(0..N-1).
+    #    r[n] = r_func(n*dt). For an even function r(-tau)=r(tau),
+    #    the "circular embedding" method typically uses 2N-length.
+    #    But let's do a minimal version with length= N or 2N.
+    
+    r_vals = np.array([r_func(n * dt, *args, **kwargs) for n in range(N)])
+    
+    # We'll embed in length 2N to reduce wrap-around correlation
+    # and to ensure positive definiteness more reliably.
+    # The first half is r(0..N-1) and the second half is r(N..2N-1) which we
+    # can set to small or just mirror if we want an even extension:
+    
+    r_full = np.zeros(2*N, dtype=float)
+    # Put r(0..N-1) in the front:
+    r_full[:N] = r_vals
+    # Option: we can place the mirrored tail in r_full[N:2N], i.e. for k=1..N-1
+    # r_full[2N-k] = r_vals[k], so that it's an even extension.
+    # This is a common approach in "circulant embedding."
+    for k in range(1, N):
+        r_full[2*N - k] = r_vals[k]
+    
+    # 3) FFT to get eigenvalues of the (2N x 2N) circulant covariance matrix
+    R_f = np.fft.fft(r_full)  # length=2N
+    
+    # 4) Create random complex amplitudes with correct magnitude.
+    #    We want to do:  X_f[k] = sqrt(2N * R_f[k]) * (Gaussian complex).
+    #    Because ifft in numpy has a 1/(2N) factor, we need *sqrt(2N).
+    
+    # Safety: ensure nonnegative real part
+    lam = np.maximum(R_f.real, 0.0)
+    
+    # random complex N(0,1)+iN(0,1):
+    rng = np.random.default_rng()
+    z = rng.normal(size=2*N) + 1j * rng.normal(size=2*N)
+    
+    # amplitude
+    amp = np.sqrt(lam * (2*N))  # the crucial scaling factor!
+    
+    # frequency components
+    X_f = amp * z
+    
+    # 5) Enforce Hermitian symmetry for a real process
+    #    X_f[k] = conj(X_f[2N-k]) for k=1..2N-1
+    #    DC (k=0) and Nyquist (k=N) should be purely real.
+    
+    # Fix the DC component and the Nyquist if needed:
+    X_f[0] = amp[0] * rng.normal()  # real only
+    # if length=2N, then X_f[N] is also purely real
+    X_f[N] = amp[N] * rng.normal()  # real only
+    
+    # Now mirror the rest:
+    for k in range(1, N):
+        X_f[2*N - k] = np.conjugate(X_f[k])
+    
+    # 6) iFFT to get time-domain. np.fft.ifft has a factor 1/(2N) internally
+    x_full = np.fft.ifft(X_f).real  # length=2N
+    
+    # We'll take the first N points as our "realization" of length N
+    x = x_full[:N]
+    
+    # Mean-zero adjustment (optional)
+    x -= np.mean(x)
+    
+    # 7) Check the variance
+    var_theoretical = r_func(0.0, *args, **kwargs)
+    var_empirical = np.var(x)
+    print(f"Theoretical variance = {var_theoretical:.6g}")
+    print(f"Empirical variance   = {var_empirical:.6g}")
+    
+    return t, x
+
+
 def simulate_gaussian_process(r, T, dt, *args, max_m=None, **kwargs):
     """
     Simulate a Gaussian stationary process with a correlation function r(t, *args, **kwargs)

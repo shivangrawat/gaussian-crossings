@@ -1,5 +1,6 @@
 import torch
 from torch.func import grad
+torch.set_default_dtype(torch.float64)
 
 
 class GaussianUpcrossings:
@@ -11,16 +12,14 @@ class GaussianUpcrossings:
           *args, **kwargs: Optional extra parameters for r_func (if needed).
         """
         self.r_func = r_func
-        self.u = u # Level u for upcrossings.
-
-
-        # You may want to store extra parameters here if r_func requires them.
+        self.u = u  # Level u for upcrossings.
         self.args = args
         self.kwargs = kwargs
 
-        self.r0 = self.r(torch.tensor([0.0]))
-        self.p0 = torch.tensor([0.0])
-        self.q0 = self.q(torch.tensor([0.0]))
+        # Evaluate r, its first derivative (p), and the second derivative (q) at t = 0.
+        self.r0 = self.r(torch.tensor([0.0], dtype=torch.float64))
+        self.p0 = self.p(torch.tensor([0.0], dtype=torch.float64))
+        self.q0 = self.q(torch.tensor([0.0], dtype=torch.float64))
 
     def r(self, t):
         """
@@ -37,24 +36,30 @@ class GaussianUpcrossings:
         return grad(sum_func)(t)
     
     def q(self, t):
-        """Return the negative derivative of p(t)"""
+        """
+        Return the negative derivative of p(t) with respect to t.
+        """
         def sum_func(t):
             return torch.sum(self.p(t))
-        return - grad(sum_func)(t)
-
+        return -grad(sum_func)(t)
+    
     def _alpha(self, t):
         """
-        Compute alpha(t) = - (r(t) + r0) / (2*(p(t)**2 + (q(t) - q0)*(r(t) + r0)) )
+        Compute alpha(t) = - (r(t) + r0) / (2*(p(t)**2 + (q(t) - q0)*(r(t) + r0)))
         where r0, q0 are evaluated at t = 0.
         """
-        return - (self.r(t) + self.r0) / (2 * (self.p(t)**2 + (self.q(t) - self.q0) * (self.r(t) + self.r0)))
+        return - (self.r(t) + self.r0) / (
+            2 * (self.p(t)**2 + (self.q(t) - self.q0) * (self.r(t) + self.r0))
+        )
     
     def _beta(self, t):
         """
-        Compute beta(t) = - (r0 - r(t)) / (2*(p(t)**2 + (q(t) + q0)*(r(t) - r0)) )
+        Compute beta(t) = - (r0 - r(t)) / (2*(p(t)**2 + (q(t) + q0)*(r(t) - r0)))
         where r0, q0 are evaluated at t = 0.
         """
-        return - (self.r0 - self.r(t)) / (2 * (self.p(t)**2 + (self.q(t) + self.q0) * (self.r(t) - self.r0)))
+        return - (self.r0 - self.r(t)) / (
+            2 * (self.p(t)**2 + (self.q(t) + self.q0) * (self.r(t) - self.r0))
+        )
     
     def _gamma(self, t, u=None):
         """
@@ -63,8 +68,8 @@ class GaussianUpcrossings:
         """
         if u is None:
             u = self.u
-
-        sqrt2 = torch.sqrt(torch.tensor(2.0))
+        # Create sqrt(2) as a double-precision tensor.
+        sqrt2 = torch.sqrt(torch.tensor(2.0, dtype=torch.float64))
         return (sqrt2 * self.p(t) / (self.r(t) + self.r0)) * u
     
     def _delta(self, t):
@@ -85,12 +90,11 @@ class GaussianUpcrossings:
         p_vals = self.p(t)
         q_vals = self.q(t)
         r0 = self.r0
-        p0 = self.p0
-        q0 = self.q0
-
-        alpha = - (r_vals + r0) / (2 * (p_vals**2 + (q_vals - q0) * (r_vals + r0)))
-        beta  = - (r0 - r_vals) / (2 * (p_vals**2 + (q_vals + q0) * (r_vals - r0)))
-        gamma = (torch.sqrt(torch.tensor(2.0)) * p_vals / (r_vals + r0)) * u
+        # p0 and q0 were computed at t=0 in __init__, but are not used in the following lines.
+        alpha = - (r_vals + r0) / (2 * (p_vals**2 + (q_vals - self.q0) * (r_vals + r0)))
+        beta  = - (r0 - r_vals) / (2 * (p_vals**2 + (q_vals + self.q0) * (r_vals - r0)))
+        sqrt2 = torch.sqrt(torch.tensor(2.0, dtype=torch.float64))
+        gamma = (sqrt2 * p_vals / (r_vals + r0)) * u
         delta = 1.0 / (r_vals + r0)
 
         return alpha, beta, gamma, delta
@@ -103,8 +107,4 @@ class GaussianUpcrossings:
             u = self.u
 
         alpha, beta, gamma, delta = self.compute_all_quantities(t, u)
-        
-        
-
-        expr1 = torch.exp(- gamma * u**2)
-        return 
+        return alpha + beta * torch.exp(-gamma)

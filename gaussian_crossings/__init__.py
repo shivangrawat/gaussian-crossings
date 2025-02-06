@@ -1,1 +1,1 @@
-from .simulation import simulate_gaussian_process, simulate_gaussian_process_cov, simulate_gaussian_process_new
+from .simulation import simulate_gaussian_process_fft, simulate_gaussian_process_cholesky

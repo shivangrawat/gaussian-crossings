@@ -1,2 +1,2 @@
 from .simulation import simulate_gaussian_process_fft, simulate_gaussian_process_cholesky
-from .formula import GaussianUpcrossings
+from .formula import GaussianUpCrossings

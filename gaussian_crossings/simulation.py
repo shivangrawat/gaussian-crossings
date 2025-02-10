@@ -32,7 +32,7 @@ def simulate_gaussian_process_fft(r_func, T, dt, *args, **kwargs):
         Simulated Gaussian process values at times in t.
     """
     # 1) Basic discretization
-    n = int(round(T / dt)) 
+    n = int(round(T / dt))
     N = 2 * n - 2
     # Time points
     t = torch.arange(n, dtype=torch.float64) * dt

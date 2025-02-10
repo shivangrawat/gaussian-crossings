@@ -1,5 +1,7 @@
 import torch
 from torch.func import grad
+import numpy as np
+import scipy.special
 
 torch.set_default_dtype(torch.float64)
 
@@ -32,21 +34,17 @@ class GaussianUpCrossings:
         """
         Evaluate the first derivative of r(t) at time t.
         """
-
         def sum_func(t):
             return torch.sum(self.r(t))
-
         return grad(sum_func)(t)
 
     def q(self, t):
         """
         Return the negative derivative of p(t) with respect to t.
         """
-
         def sum_func(t):
             return torch.sum(self.p(t))
-
-        return -grad(sum_func)(t)
+        return - grad(sum_func)(t)
 
     def _alpha(self, t):
         """
@@ -109,13 +107,190 @@ class GaussianUpCrossings:
         delta = 1.0 / (r_vals + r0)
 
         return alpha, beta, gamma, delta
-
-    def I(self, t, u=None):
+    
+    def upcrossing_mean_rate(self, u=None):
         """
-        Compute the upcrossing intensity I(t) = alpha(t) + beta(t) * exp(-gamma(t)).
+        Compute the mean rate (per unit time) of the upcrossings counting process.
+        """
+        if u is None:
+            u = self.u
+        return (1 / (2 * torch.pi)) * torch.sqrt(self.q0 / self.r0) * torch.exp(-u**2 / (2 * self.r0))
+    
+    def downcrossing_mean_rate(self, u=None):
+        """
+        Compute the mean rate (per unit time) of the downcrossings counting process.
+        """
+        return self.upcrossing_mean_rate(u=u)
+    
+    def crossing_mean_rate(self, u=None):
+        """
+        Compute the mean rate (per unit time) of the crossings counting process.
+        """
+        return 2 * self.upcrossing_mean_rate(u=u)
+    
+    def upcrossing_mean(self, T, u=None):
+        return self.upcrossing_mean_rate(u=u) * T
+    
+    def downcrossing_mean(self, T, u=None):
+        return self.downcrossing_mean_rate(u=u) * T
+    
+    def crossing_mean(self, T, u=None):
+        return self.crossing_mean_rate(u=u) * T
+
+    def upcrossing_integrand(self, t, u=None):
+        """
+        Compute the integral formula we derived for the variance of upcrossings counting process.
+        """
+        if u is None:
+            u = self.u
+        
+        r = self.r(t)
+
+        r0 = self.r0
+        q0 = self.q0
+
+        alpha, beta, gamma, delta = self.compute_all_quantities(t, u)
+
+        expr1 = alpha**2 * gamma**2 / (alpha + beta)
+
+        final_integral = (
+            torch.exp(-delta * u**2)
+            / (4 * torch.pi**2 * torch.sqrt(r0**2 - r**2))
+            * (
+                (torch.exp(-alpha * gamma**2) / (2 * torch.sqrt(alpha * beta)))
+                * (
+                    1 + np.sqrt(torch.pi) * gamma * torch.sqrt(alpha + beta) * torch.exp(expr1) * torch.special.erf(torch.sqrt(expr1))
+                )
+                + torch.pi * ((alpha - beta - 2 * alpha * beta * gamma**2) / (alpha * beta))
+                * scipy.special.owens_t(gamma * torch.sqrt(2 * alpha * beta / (alpha + beta)), torch.sqrt(alpha / beta))
+            )
+        ) - (1 / (4 * torch.pi**2)) * (q0 / r0) * torch.exp(-(u**2) / r0)
+
+        return final_integral
+    
+    def downcrossing_integrand(self, t, u=None):
+        """
+        Ame as the integral for upcrossings.
+        """
+        return self.I_upcrossing(t, u=u)
+    
+    def crossing_integrand(self, t, u=None):
+        """
+        Compute the integral formula we derived for the variance of crossings counting process.
+        """
+        if u is None:
+            u = self.u
+        
+        r = self.r(t)
+
+        r0 = self.r0
+        q0 = self.q0
+
+        alpha, beta, gamma, delta = self.compute_all_quantities(t, u)
+
+        expr1 = alpha**2 * gamma**2 / (alpha + beta)
+
+        final_integral = (
+            torch.exp(-delta * u**2)
+            / (4 * torch.pi**2 * torch.sqrt(r0**2 - r**2))
+            * (
+                (2 * torch.exp(-alpha * gamma**2) / torch.sqrt(alpha * beta))
+                * (
+                    1 + np.sqrt(torch.pi) * gamma * torch.sqrt(alpha + beta) * torch.exp(expr1) * torch.special.erf(torch.sqrt(expr1))
+                )
+                + 4 * torch.pi * ((alpha - beta - 2 * alpha * beta * gamma**2) / (alpha * beta))
+                * (scipy.special.owens_t(gamma * torch.sqrt(2 * alpha * beta / (alpha + beta)), torch.sqrt(alpha / beta)) - 1 / 8)
+            )
+        ) - (1 / (torch.pi**2)) * (q0 / r0) * torch.exp(-(u**2) / r0)
+
+        return final_integral
+
+    def upcrossing_variance(self, T, u=None, epsilon_left=1e-5, num_points=1000):
+        """
+        Compute the variance of the upcrossings counting process per unit time by mapping into [0, 1].
         """
         if u is None:
             u = self.u
 
-        alpha, beta, gamma, delta = self.compute_all_quantities(t, u)
-        return alpha + beta * torch.exp(-gamma)
+        t_prime = torch.linspace(epsilon_left, T / (1 + T), num_points)
+        x = t_prime / (1 - t_prime)
+        new_integrand_vals = (1 - x / T) * self.upcrossing_integrand(x, u=u) / (1 - t_prime)**2
+        left_limit = - (1 / (4 * torch.pi**2)) * (self.q0 / self.r0) * torch.exp(-(u**2) / self.r0)
+        integral = epsilon_left * left_limit + torch.trapz(new_integrand_vals[~torch.isnan(new_integrand_vals)], t_prime[~torch.isnan(new_integrand_vals)])
+
+        return T * (self.upcrossing_mean_rate(u=u) + 2 * integral)
+
+    def upcrossing_variance_CLT_per_unit_time(self, u=None, epsilon_left=1e-4, epsilon_right=1e-5, num_points=1000):
+        """
+        Compute the variance of the upcrossings counting process per unit time by mapping into [0, 1].
+        """
+        if u is None:
+            u = self.u
+
+        t_prime = torch.linspace(epsilon_left, 1 - epsilon_right, num_points)
+        x = t_prime / (1 - t_prime)
+        new_integrand_vals = self.upcrossing_integrand(x, u=u) / (1 - t_prime)**2
+        left_limit = - (1 / (4 * torch.pi**2)) * (self.q0 / self.r0) * torch.exp(-(u**2) / self.r0)
+        integral = epsilon_left * left_limit + torch.trapz(new_integrand_vals[~torch.isnan(new_integrand_vals)], t_prime[~torch.isnan(new_integrand_vals)])
+
+        return self.upcrossing_mean_rate(u=u) + 2 * integral
+    
+    def upcrossing_variance_CLT(self, T, u=None, epsilon_left=1e-4, epsilon_right=1e-5, num_points=1000):
+        """
+        Compute the variance of the upcrossings counting process per unit time by mapping into [0, 1].
+        """
+        return T * (self.upcrossing_variance_CLT_per_unit_time(u=u, epsilon_left=epsilon_left, epsilon_right=epsilon_right, num_points=num_points)) 
+
+    def downcrossing_variance(self, T, u=None, epsilon_left=1e-5, num_points=1000):
+        return self.upcrossing_variance(T, u=u, epsilon_left=epsilon_left, num_points=num_points)
+    
+    def downcrossing_variance_CLT_per_unit_time(self, u=None, epsilon_left=1e-4, epsilon_right=1e-5, num_points=1000):
+        return self.upcrossing_variance_CLT_per_unit_time(u=u, epsilon_left=epsilon_left, epsilon_right=epsilon_right, num_points=num_points)
+    
+    def downcrossing_variance_CLT(self, T, u=None, epsilon_left=1e-4, epsilon_right=1e-5, num_points=1000):
+        return self.upcrossing_variance_CLT(T, u=u, epsilon_left=epsilon_left, epsilon_right=epsilon_right, num_points=num_points)
+    
+    def crossing_variance(self, T, u=None, epsilon_left=1e-5, num_points=1000):
+        if u is None:
+            u = self.u
+
+        t_prime = torch.linspace(epsilon_left, T / (1 + T), num_points)
+        x = t_prime / (1 - t_prime)
+        new_integrand_vals = (1 - x / T) * self.crossing_integrand(x, u=u) / (1 - t_prime)**2
+        left_limit = - (1 / torch.pi**2) * (self.q0 / self.r0) * torch.exp(-(u**2) / self.r0)
+        integral = epsilon_left * left_limit + torch.trapz(new_integrand_vals[~torch.isnan(new_integrand_vals)], t_prime[~torch.isnan(new_integrand_vals)])
+
+        return T * (self.crossing_mean_rate(u=u) + 2 * integral)
+    
+    def crossing_variance_CLT_per_unit_time(self, u=None, epsilon_left=1e-4, epsilon_right=1e-5, num_points=1000):
+        if u is None:
+            u = self.u
+
+        t_prime = torch.linspace(epsilon_left, 1 - epsilon_right, num_points)
+        x = t_prime / (1 - t_prime)
+        new_integrand_vals = self.crossing_integrand(x, u=u) / (1 - t_prime)**2
+        left_limit = - (1 / torch.pi**2) * (self.q0 / self.r0) * torch.exp(-(u**2) / self.r0)
+        integral = epsilon_left * left_limit + torch.trapz(new_integrand_vals[~torch.isnan(new_integrand_vals)], t_prime[~torch.isnan(new_integrand_vals)])
+
+        return self.crossing_mean_rate(u=u) + 2 * integral
+    
+    def crossing_variance_CLT(self, T, u=None, epsilon_left=1e-4, epsilon_right=1e-5, num_points=1000):
+        return T * (self.crossing_variance_CLT_per_unit_time(u=u, epsilon_left=epsilon_left, epsilon_right=epsilon_right, num_points=num_points))
+    
+    def upcrossing_fano_factor_CLT(self, u=None, epsilon_left=1e-5, epsilon_right=1e-5, num_points=1000):
+        return self.upcrossing_variance_CLT_per_unit_time(u=u, epsilon_left=epsilon_left, epsilon_right=epsilon_right, num_points=num_points) / self.upcrossing_mean_rate(u=u)
+    
+    def downcrossing_fano_factor_CLT(self, u=None, epsilon_left=1e-5, epsilon_right=1e-5, num_points=1000):
+        return self.downcrossing_variance_CLT_per_unit_time(u=u, epsilon_left=epsilon_left, epsilon_right=epsilon_right, num_points=num_points) / self.downcrossing_mean_rate(u=u)
+    
+    def crossing_fano_factor_CLT(self, u=None, epsilon_left=1e-5, epsilon_right=1e-5, num_points=1000):
+        return self.crossing_variance_CLT_per_unit_time(u=u, epsilon_left=epsilon_left, epsilon_right=epsilon_right, num_points=num_points) / self.crossing_mean_rate(u=u)
+    
+    def upcrossing_fano_factor(self, T, u=None, epsilon_left=1e-5, num_points=1000):
+        return self.upcrossing_variance(T, u=u, epsilon_left=epsilon_left, num_points=num_points) / self.upcrossing_mean(T, u=u)
+    
+    def downcrossing_fano_factor(self, T, u=None, epsilon_left=1e-5, num_points=1000):
+        return self.downcrossing_variance(T, u=u, epsilon_left=epsilon_left, num_points=num_points) / self.downcrossing_mean(T, u=u)
+    
+    def crossing_fano_factor(self, T, u=None, epsilon_left=1e-5, num_points=1000):
+        return self.crossing_variance(T, u=u, epsilon_left=epsilon_left, num_points=num_points) / self.crossing_mean(T, u=u)

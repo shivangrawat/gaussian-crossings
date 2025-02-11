@@ -294,3 +294,57 @@ class GaussianUpCrossings:
     
     def crossing_fano_factor(self, T, u=None, epsilon_left=1e-5, num_points=1000):
         return self.crossing_variance(T, u=u, epsilon_left=epsilon_left, num_points=num_points) / self.crossing_mean(T, u=u)
+
+    def upcrossing_integrand_mean_level(self, t):
+        """
+        Compute the integral formula we derived for the variance of upcrossings counting process. This one is specifically for the mean level crossings, i.e., u=0.
+        """
+
+        r = self.r(t)
+
+        r0 = self.r0
+        q0 = self.q0
+
+        alpha, beta, _, _ = self.compute_all_quantities(t, u=0)
+
+        final_integral = (
+            1 / (8 * torch.pi**2 * torch.sqrt(r0**2 - r**2))
+            * (
+                1 / (torch.sqrt(alpha * beta))
+                + (alpha - beta) / (alpha * beta) * torch.arctan(torch.sqrt(alpha / beta))
+            )    
+        ) - (1 / (4 * torch.pi**2)) * (q0 / r0)
+
+        return final_integral
+    
+    def downcrossing_integrand_mean_level(self, t):
+        """
+        Compute the integral formula we derived for the variance of downcrossings counting process. This one is specifically for the mean level crossings, i.e., u=0.
+        """
+        return self.upcrossing_integrand_mean_level(t=t)
+    
+    def crossing_integrand_mean_level(self, t):
+        """
+        Compute the integral formula we derived for the variance of crossings counting process. This one is specifically for the mean level crossings, i.e., u=0.
+        """
+
+        r = self.r(t)
+
+        r0 = self.r0
+        q0 = self.q0
+
+        alpha, beta, _, _ = self.compute_all_quantities(t, u=0)
+
+        expr = torch.sqrt(alpha / beta)
+
+        final_integral = (
+            1 / (2 * torch.pi**2 * torch.sqrt(r0**2 - r**2))
+            * (
+                1 / (torch.sqrt(alpha * beta))
+                + (alpha - beta) / (alpha * beta) * torch.arctan((expr - 1) / (expr + 1))
+            )    
+        ) - (1 / (torch.pi**2)) * (q0 / r0)
+
+        return final_integral
+    
+    

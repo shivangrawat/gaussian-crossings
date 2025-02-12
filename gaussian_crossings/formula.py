@@ -33,9 +33,9 @@ class GaussianUpCrossings:
         self.kwargs = kwargs
 
         # Evaluate r, its first derivative (p), and the second derivative (q) at t = 0.
-        self.r0 = self.r(torch.tensor([0.0], dtype=torch.float64))
+        self.r0 = self.r(torch.tensor([1e-20], dtype=torch.float64))
         self.p0 = self.p(torch.tensor([0.0], dtype=torch.float64))
-        self.q0 = self.q(torch.tensor([0.0], dtype=torch.float64))
+        self.q0 = self.q(torch.tensor([1e-20], dtype=torch.float64))
 
     def r(self, t):
         """
@@ -77,7 +77,7 @@ class GaussianUpCrossings:
         """
         def sum_func(t):
             return torch.sum(self.p(t))
-        return -grad(sum_func)(t)
+        return - grad(sum_func)(t)
 
     def _alpha(self, t):
         """

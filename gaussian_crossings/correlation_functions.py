@@ -22,9 +22,31 @@ def r_filtered_OU(t, sigma, tau_e, tau_f):
     Returns:
         Tensor: The autocovariance computed at times t.
     """
-    zeta = tau_f / tau_e
-    return (sigma ** 2 / (1 - zeta ** 2)) * (
-        torch.exp(- torch.abs(t) / tau_e) - zeta * torch.exp(- torch.abs(t) / tau_f)
+    kappa = tau_f / tau_e
+    return (sigma ** 2 / (1 - kappa ** 2)) * (
+        torch.exp(- torch.abs(t) / tau_e) - kappa * torch.exp(- torch.abs(t) / tau_f)
+    )
+
+def r_mean_reverting_OU_noise(t, sigma, tau_e, tau_f):
+    """
+    Autocovariance function of the mean-reverting OU noise.
+    
+    Parameters:
+        t : tensor or array
+            Time differences.
+        sigma : float
+            Standard deviation (amplitude) of the process.
+        tau_e : float
+            Exponential decay time constant.
+        tau_f : float
+            Filter time constant.
+    
+    Returns:
+        Tensor: The autocovariance computed at times t.
+    """
+    kappa = tau_f / tau_e
+    return (sigma ** 2 * kappa / (1 - kappa ** 2)) * (
+        torch.exp(- torch.abs(t) / tau_e) - kappa * torch.exp(- torch.abs(t) / tau_f)
     )
 
 def r_OU(t, sigma, tau):

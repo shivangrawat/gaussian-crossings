@@ -5,48 +5,47 @@ import scipy.special
 from scipy.special import kv, gamma
 
 
-def r_filtered_OU(t, sigma, tau_e, tau_f):
+def r_filtered_OU(t, sigma, tau, kappa):
     """
     Filtered Ornstein-Uhlenbeck autocovariance function.
-    
+
     Parameters:
         t : tensor or array
             Time differences.
         sigma : float
             Standard deviation (amplitude) of the process.
-        tau_e : float
-            Exponential decay time constant.
-        tau_f : float
-            Filter time constant.
-    
+        tau : float
+            Exponential decay time constant (tau_e).
+        kappa : float
+            Ratio of the filter time constant (tau_f) to tau (i.e., tau_f = kappa * tau).
+
     Returns:
         Tensor: The autocovariance computed at times t.
     """
-    kappa = tau_f / tau_e
+
     return (sigma ** 2 / (1 - kappa ** 2)) * (
-        torch.exp(- torch.abs(t) / tau_e) - kappa * torch.exp(- torch.abs(t) / tau_f)
+        torch.exp(-torch.abs(t) / tau) - kappa * torch.exp(-torch.abs(t) / (kappa * tau))
     )
 
-def r_mean_reverting_OU_noise(t, sigma, tau_e, tau_f):
+def r_OU_noise(t, sigma, tau, kappa):
     """
-    Autocovariance function of the mean-reverting OU noise.
-    
+    Autocovariance function of a process with OU noise.
+
     Parameters:
         t : tensor or array
             Time differences.
         sigma : float
             Standard deviation (amplitude) of the process.
-        tau_e : float
-            Exponential decay time constant.
-        tau_f : float
-            Filter time constant.
-    
+        tau : float
+            Exponential decay time constant (tau_e).
+        kappa : float
+            Ratio of the filter time constant (tau_f) to tau (i.e., tau_f = kappa * tau).
+
     Returns:
         Tensor: The autocovariance computed at times t.
     """
-    kappa = tau_f / tau_e
     return (sigma ** 2 * kappa / (1 - kappa ** 2)) * (
-        torch.exp(- torch.abs(t) / tau_e) - kappa * torch.exp(- torch.abs(t) / tau_f)
+        torch.exp(-torch.abs(t) / tau) - kappa * torch.exp(-torch.abs(t) / (kappa * tau))
     )
 
 def r_OU(t, sigma, tau):
@@ -66,14 +65,14 @@ def r_OU(t, sigma, tau):
     """
     return sigma ** 2 * torch.exp(- torch.abs(t) / tau)
 
-def r_rational_quadratic(t, tau, sigma, alpha):
+def r_rational_quadratic(t, sigma, tau, alpha):
     """
     Rational quadratic autocorrelation function.
 
     Parameters:
         t (array-like): Time differences.
-        tau (float): Length-scale parameter.
         sigma (float): Standard deviation (amplitude) of the process.
+        tau (float): Length-scale parameter.
         alpha (float): Shape parameter controlling the relative weighting of different scales.
 
     Returns:
@@ -98,14 +97,14 @@ def r_squared_exp(t, sigma, tau):
     """
     return sigma ** 2 * (torch.exp(- (t / (2 * tau)) ** 2))
 
-def r_matern(t, tau, sigma, nu):
+def r_matern(t, sigma, tau, nu):
     """
     Matern autocorrelation function.
 
     Parameters:
         t (array-like): Time differences.
-        tau (float): Length-scale parameter.
         sigma (float): Standard deviation (amplitude) of the process.
+        tau (float): Length-scale parameter.
         nu (float): Smoothness parameter (nu > 0).
 
     Returns:

@@ -28,7 +28,7 @@ class GaussianUpCrossings:
                 - q0: the negative second derivative of r(t) at t = 0.
         """
         self.r_func = r_func
-        self.u = u  # Level u for upcrossings.
+        self.u = u 
         self.args = args
         self.kwargs = kwargs
 

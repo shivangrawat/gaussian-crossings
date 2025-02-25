@@ -7,7 +7,7 @@ torch.set_default_dtype(torch.float64)
 
 
 class GaussianUpCrossingsDimless:
-    def __init__(self, r_func, u=0, *args, **kwargs):
+    def __init__(self, r_func, u=0, tau=None, *args, **kwargs):
         """
         Initialize the GaussianUpCrossings instance.
 
@@ -28,7 +28,8 @@ class GaussianUpCrossingsDimless:
                 - q0: the negative second derivative of r(t) at t = 0.
         """
         self.r_func = r_func
-        self.u = u  # Level u for upcrossings.
+        self.u = u 
+        self.tau = tau # the time constant of associated with the process
         self.args = args
         self.kwargs = kwargs
 
@@ -40,6 +41,7 @@ class GaussianUpCrossingsDimless:
     def r(self, t):
         """
         Evaluate the correlation function r at the given time(s).
+        We set tau = 1.0 to make everything dimensionless.
 
         Parameters:
             t (torch.Tensor): A tensor representing time(s) at which to evaluate r.
@@ -47,11 +49,12 @@ class GaussianUpCrossingsDimless:
         Returns:
             torch.Tensor: The correlation function evaluated at t.
         """
-        return self.r_func(t, *self.args, **self.kwargs)
+        return self.r_func(t, tau=1.0, *self.args, **self.kwargs)
 
     def p(self, t):
         """
         Evaluate the first derivative of the correlation function r(t) at the given time(s).
+        Returns this value for tau = 1.0.
 
         Parameters:
             t (torch.Tensor): A tensor representing time(s) at which to compute the derivative.
@@ -66,6 +69,7 @@ class GaussianUpCrossingsDimless:
     def q(self, t):
         """
         Evaluate the negative derivative of p(t) with respect to t.
+        Returns this value for tau = 1.0.
 
         This effectively computes the (negative) second derivative of r(t).
 
@@ -82,6 +86,7 @@ class GaussianUpCrossingsDimless:
     def _alpha(self, t):
         """
         Compute the auxiliary quantity alpha(t).
+        Returns this value for tau = 1.0.
 
         The formula is given by:
             alpha(t) = - (r(t) + r0) / (2*(p(t)**2 + (q(t) - q0)*(r(t) + r0)))
@@ -101,6 +106,7 @@ class GaussianUpCrossingsDimless:
     def _beta(self, t):
         """
         Compute the auxiliary quantity beta(t).
+        Returns this value for tau = 1.0.
 
         The formula is given by:
             beta(t) = - (r0 - r(t)) / (2*(p(t)**2 + (q(t) + q0)*(r(t) - r0)))
@@ -120,6 +126,7 @@ class GaussianUpCrossingsDimless:
     def _gamma(self, t, u=None):
         """
         Compute the auxiliary quantity gamma(t).
+        Returns this value for tau = 1.0.
 
         The formula is given by:
             gamma(t) = (sqrt(2) * p(t) / (r(t) + r0)) * u,
@@ -141,6 +148,7 @@ class GaussianUpCrossingsDimless:
     def _delta(self, t):
         """
         Compute the auxiliary quantity delta(t).
+        Returns this value for tau = 1.0.
 
         The formula is given by:
             delta(t) = 1 / (r(t) + r0)
@@ -201,7 +209,7 @@ class GaussianUpCrossingsDimless:
         """
         if u is None:
             u = self.u
-        return (1 / (2 * torch.pi)) * torch.sqrt(self.q0 / self.r0) * torch.exp(-u**2 / (2 * self.r0))
+        return (1 / self.tau) * (1 / (2 * torch.pi)) * torch.sqrt(self.q0 / self.r0) * torch.exp(-u**2 / (2 * self.r0))
     
     def downcrossing_mean_rate(self, u=None):
         """
@@ -393,10 +401,10 @@ class GaussianUpCrossingsDimless:
         if u is None:
             u = self.u
 
-        t_prime = torch.linspace(epsilon_left, T / (1 + T), num_points)
+        t_prime = torch.linspace(epsilon_left, (T / self.tau) / (1 + (T / self.tau)), num_points)
         x = t_prime / (1 - t_prime)
-        new_integrand_vals = (1 - x / T) * self.upcrossing_integrand(x, u=u) / (1 - t_prime)**2
-        left_limit = - (1 / (4 * torch.pi**2)) * (self.q0 / self.r0) * torch.exp(-(u**2) / self.r0)
+        new_integrand_vals = (1 / self.tau) * (1 - self.tau * x / T) * self.upcrossing_integrand(x, u=u) / (1 - t_prime)**2
+        left_limit = - (1 / self.tau) * (1 / (4 * torch.pi**2)) * (self.q0 / self.r0) * torch.exp(-(u**2) / self.r0)
         integral = epsilon_left * left_limit + torch.trapz(new_integrand_vals[~torch.isnan(new_integrand_vals)], t_prime[~torch.isnan(new_integrand_vals)])
 
         return T * (self.upcrossing_mean_rate(u=u) + 2 * integral)
@@ -422,8 +430,8 @@ class GaussianUpCrossingsDimless:
 
         t_prime = torch.linspace(epsilon_left, 1 - epsilon_right, num_points)
         x = t_prime / (1 - t_prime)
-        new_integrand_vals = self.upcrossing_integrand(x, u=u) / (1 - t_prime)**2
-        left_limit = - (1 / (4 * torch.pi**2)) * (self.q0 / self.r0) * torch.exp(-(u**2) / self.r0)
+        new_integrand_vals = (1 / self.tau) * self.upcrossing_integrand(x, u=u) / (1 - t_prime)**2
+        left_limit = - (1 / self.tau) * (1 / (4 * torch.pi**2)) * (self.q0 / self.r0) * torch.exp(-(u**2) / self.r0)
         integral = epsilon_left * left_limit + torch.trapz(new_integrand_vals[~torch.isnan(new_integrand_vals)], t_prime[~torch.isnan(new_integrand_vals)])
 
         return self.upcrossing_mean_rate(u=u) + 2 * integral
@@ -521,10 +529,10 @@ class GaussianUpCrossingsDimless:
         if u is None:
             u = self.u
 
-        t_prime = torch.linspace(epsilon_left, T / (1 + T), num_points)
+        t_prime = torch.linspace(epsilon_left, (T / self.tau) / (1 + (T / self.tau)), num_points)
         x = t_prime / (1 - t_prime)
-        new_integrand_vals = (1 - x / T) * self.crossing_integrand(x, u=u) / (1 - t_prime)**2
-        left_limit = - (1 / torch.pi**2) * (self.q0 / self.r0) * torch.exp(-(u**2) / self.r0)
+        new_integrand_vals = (1 / self.tau) * (1 - self.tau * x / T) * self.crossing_integrand(x, u=u) / (1 - t_prime)**2
+        left_limit = - (1 / self.tau) * (1 / torch.pi**2) * (self.q0 / self.r0) * torch.exp(-(u**2) / self.r0)
         integral = epsilon_left * left_limit + torch.trapz(new_integrand_vals[~torch.isnan(new_integrand_vals)], t_prime[~torch.isnan(new_integrand_vals)])
 
         return T * (self.crossing_mean_rate(u=u) + 2 * integral)
@@ -550,8 +558,8 @@ class GaussianUpCrossingsDimless:
 
         t_prime = torch.linspace(epsilon_left, 1 - epsilon_right, num_points)
         x = t_prime / (1 - t_prime)
-        new_integrand_vals = self.crossing_integrand(x, u=u) / (1 - t_prime)**2
-        left_limit = - (1 / torch.pi**2) * (self.q0 / self.r0) * torch.exp(-(u**2) / self.r0)
+        new_integrand_vals = (1 / self.tau) * self.crossing_integrand(x, u=u) / (1 - t_prime)**2
+        left_limit = - (1 / self.tau) * (1 / torch.pi**2) * (self.q0 / self.r0) * torch.exp(-(u**2) / self.r0)
         integral = epsilon_left * left_limit + torch.trapz(new_integrand_vals[~torch.isnan(new_integrand_vals)], t_prime[~torch.isnan(new_integrand_vals)])
 
         return self.crossing_mean_rate(u=u) + 2 * integral
@@ -578,6 +586,7 @@ class GaussianUpCrossingsDimless:
     def upcrossing_fano_factor_CLT(self, u=None, epsilon_left=1e-5, epsilon_right=1e-5, num_points=1000):
         """
         Compute the Fano factor (variance/mean) for the upcrossings counting process using the CLT formula.
+        Note that this Fano factor is independent of self.tau.
 
         Parameters:
             u (float or torch.Tensor, optional): The threshold level.
@@ -589,8 +598,21 @@ class GaussianUpCrossingsDimless:
         Returns:
             torch.Tensor: The Fano factor for the upcrossings counting process.
         """
-        return self.upcrossing_variance_CLT_per_unit_time(u=u, epsilon_left=epsilon_left, epsilon_right=epsilon_right, num_points=num_points) / self.upcrossing_mean_rate(u=u)
-    
+        if u is None:
+            u = self.u
+
+        # the mean formula without tau prefactor
+        mean_formula = (1 / (2 * torch.pi)) * torch.sqrt(self.q0 / self.r0) * torch.exp(-u**2 / (2 * self.r0))
+
+        # the variance formula
+        t_prime = torch.linspace(epsilon_left, 1 - epsilon_right, num_points)
+        x = t_prime / (1 - t_prime)
+        new_integrand_vals = self.upcrossing_integrand(x, u=u) / (1 - t_prime)**2
+        left_limit = - (1 / (4 * torch.pi**2)) * (self.q0 / self.r0) * torch.exp(-(u**2) / self.r0)
+        integral = epsilon_left * left_limit + torch.trapz(new_integrand_vals[~torch.isnan(new_integrand_vals)], t_prime[~torch.isnan(new_integrand_vals)])
+        
+        return 1 + 2 * integral / mean_formula
+
     def downcrossing_fano_factor_CLT(self, u=None, epsilon_left=1e-5, epsilon_right=1e-5, num_points=1000):
         """
         Compute the Fano factor (variance/mean) for the downcrossings counting process using the CLT formula.
@@ -605,7 +627,7 @@ class GaussianUpCrossingsDimless:
         Returns:
             torch.Tensor: The Fano factor for the downcrossings counting process.
         """
-        return self.downcrossing_variance_CLT_per_unit_time(u=u, epsilon_left=epsilon_left, epsilon_right=epsilon_right, num_points=num_points) / self.downcrossing_mean_rate(u=u)
+        return self.upcrossing_fano_factor_CLT(u=u, epsilon_left=epsilon_left, epsilon_right=epsilon_right, num_points=num_points)
     
     def crossing_fano_factor_CLT(self, u=None, epsilon_left=1e-5, epsilon_right=1e-5, num_points=1000):
         """
@@ -621,7 +643,20 @@ class GaussianUpCrossingsDimless:
         Returns:
             torch.Tensor: The Fano factor for the crossings counting process.
         """
-        return self.crossing_variance_CLT_per_unit_time(u=u, epsilon_left=epsilon_left, epsilon_right=epsilon_right, num_points=num_points) / self.crossing_mean_rate(u=u)
+        if u is None:
+            u = self.u
+
+        # the mean formula without tau prefactor
+        mean_formula = (1 / torch.pi) * torch.sqrt(self.q0 / self.r0) * torch.exp(-u**2 / (2 * self.r0))
+
+        # the variance formula
+        t_prime = torch.linspace(epsilon_left, 1 - epsilon_right, num_points)
+        x = t_prime / (1 - t_prime)
+        new_integrand_vals = self.crossing_integrand(x, u=u) / (1 - t_prime)**2
+        left_limit = - (1 / torch.pi**2) * (self.q0 / self.r0) * torch.exp(-(u**2) / self.r0)
+        integral = epsilon_left * left_limit + torch.trapz(new_integrand_vals[~torch.isnan(new_integrand_vals)], t_prime[~torch.isnan(new_integrand_vals)])
+        
+        return 1 + 2 * integral / mean_formula
     
     def upcrossing_fano_factor(self, T, u=None, epsilon_left=1e-5, num_points=1000):
         """
@@ -697,7 +732,7 @@ class GaussianUpCrossingsDimless:
             )    
         ) - (1 / (4 * torch.pi**2)) * (q0 / r0)
 
-        return final_integral
+        return (1 / self.tau) * final_integral
     
     def downcrossing_integrand_mean_level(self, t):
         """
@@ -741,4 +776,4 @@ class GaussianUpCrossingsDimless:
             )    
         ) - (1 / (torch.pi**2)) * (q0 / r0)
 
-        return final_integral
+        return (1 / self.tau) * final_integral

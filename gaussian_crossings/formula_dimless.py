@@ -1,5 +1,5 @@
 import torch
-from torch.func import grad
+from torch.func import grad, hessian
 import numpy as np
 import scipy.special
 
@@ -34,9 +34,9 @@ class GaussianUpCrossingsDimless:
         self.kwargs = kwargs
 
         # Evaluate r, its first derivative (p), and the second derivative (q) at t = 0.
-        self.r0 = self.r(torch.tensor([1e-20], dtype=torch.float64))
-        self.p0 = self.p(torch.tensor([0.0], dtype=torch.float64))
-        self.q0 = self.q(torch.tensor([1e-20], dtype=torch.float64))
+        self.r0 = self.r(torch.tensor(0.0, dtype=torch.float64))
+        self.p0 = torch.tensor(0.0, dtype=torch.float64)
+        self.q0 = self.q(torch.tensor(1e-40, dtype=torch.float64)) # to avoid issues with autograd at t=0
 
     def r(self, t):
         """
@@ -732,7 +732,7 @@ class GaussianUpCrossingsDimless:
             )    
         ) - (1 / (4 * torch.pi**2)) * (q0 / r0)
 
-        return (1 / self.tau) * final_integral
+        return final_integral
     
     def downcrossing_integrand_mean_level(self, t):
         """
@@ -776,4 +776,4 @@ class GaussianUpCrossingsDimless:
             )    
         ) - (1 / (torch.pi**2)) * (q0 / r0)
 
-        return (1 / self.tau) * final_integral
+        return final_integral

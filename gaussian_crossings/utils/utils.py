@@ -189,6 +189,9 @@ def euler_maruyama_sde(model, time, dt, x0=None):
     if x0 is None:
         x0 = model.steady_state()
 
+    # Create time vector from 0 to time with n_points equally spaced points
+    t = torch.linspace(0, time, n_points)
+
     # Prepare output
     trajectory = torch.zeros((n_points, 2), dtype=torch.float)
     trajectory[0] = x0
@@ -205,7 +208,7 @@ def euler_maruyama_sde(model, time, dt, x0=None):
         # 3) Euler–Maruyama update:
         trajectory[i + 1] = trajectory[i] + drift * dt + noise * sqrt_dt
 
-    return trajectory
+    return t, trajectory
 
 def euler_maruyama_upcrossings(model, time, dt, u_tensor, idx, x0=None):
     """
@@ -252,3 +255,61 @@ def euler_maruyama_upcrossings(model, time, dt, u_tensor, idx, x0=None):
         current_state = next_state
 
     return upcrossings
+
+def dynm_fun(f):
+    """A wrapper for the dynamical function"""
+
+    def wrapper(self, t, x):
+        new_fun = lambda t, x: f(self, t, x)
+        return new_fun(t, x)
+
+    return wrapper
+
+def autocorrelation(x):
+    """
+    Compute the autocorrelation function of a 1D time series.
+
+    This function computes the full autocorrelation of the input signal after subtracting its mean.
+    It then extracts the non-negative lags and normalizes the result by dividing by (n - 1),
+    where n is the number of samples in x. Note that this normalization causes the zero-lag value
+    to equal the unbiased sample variance, i.e.,
+    
+        ac[0] = sum((x - mean(x))**2) / (n - 1)
+    
+    If a normalized autocorrelation (with ac[0] == 1) is desired, divide the output of this function
+    by its first element.
+
+    Parameters
+    ----------
+    x : array_like
+        A one-dimensional time series (e.g., list, numpy array, or torch tensor) whose autocorrelation
+        is to be computed. If x is a torch tensor, it is first converted to a numpy array.
+
+    Returns
+    -------
+    ac : ndarray
+        A one-dimensional numpy array containing the autocorrelation values for non-negative lags,
+        normalized by (n - 1).
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> x = np.random.randn(100)
+    >>> ac = autocorrelation(x)
+    >>> # ac[0] equals the unbiased sample variance of x.
+    >>> ac_normalized = ac / ac[0]  # Now ac_normalized[0] == 1
+    """
+    # Convert to numpy array in case x is a torch tensor.
+    x = np.asarray(x)
+    n = len(x)
+    # Subtract the mean.
+    x = x - np.mean(x)
+    # Compute the full autocorrelation using np.correlate.
+    ac_full = np.correlate(x, x, mode='full')
+    # Keep only the second half (non-negative lags).
+    ac = ac_full[n-1:]
+    # Normalize so that the zero lag equals the unbiased sample variance.
+    ac = ac / (n - 1)
+    return ac
+
+

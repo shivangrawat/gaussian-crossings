@@ -59,8 +59,6 @@ def count_crossings(x, threshold):
     """
     return count_upcrossings(x, threshold) + count_downcrossings(x, threshold)
 
-import torch
-
 def upcrossing_times(x, t, threshold):
     """
     Find the times of upcrossings of a threshold in a 1D signal using linear interpolation.
@@ -254,4 +252,3 @@ def euler_maruyama_upcrossings(model, time, dt, u_tensor, idx, x0=None):
         current_state = next_state
 
     return upcrossings
-

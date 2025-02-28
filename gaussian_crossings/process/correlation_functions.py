@@ -5,7 +5,7 @@ import scipy.special
 from scipy.special import kv, gamma
 
 
-def r_filtered_OU(t, sigma, tau, kappa):
+def r_filtered_OU(t, sigma, tau, kappa, **kwargs):
     """
     Filtered Ornstein-Uhlenbeck autocovariance function.
 
@@ -27,7 +27,7 @@ def r_filtered_OU(t, sigma, tau, kappa):
         torch.exp(-torch.abs(t) / tau) - kappa * torch.exp(-torch.abs(t) / (kappa * tau))
     )
 
-def r_OU_noise(t, sigma, tau, kappa):
+def r_OU_noise(t, sigma, tau, kappa, **kwargs):
     """
     Autocovariance function of a process with OU noise.
 
@@ -48,7 +48,7 @@ def r_OU_noise(t, sigma, tau, kappa):
         torch.exp(-torch.abs(t) / tau) - kappa * torch.exp(-torch.abs(t) / (kappa * tau))
     )
 
-def r_OU(t, sigma, tau):
+def r_OU(t, sigma, tau, **kwargs):
     """
     Ornstein-Uhlenbeck autocovariance function.
     
@@ -65,7 +65,7 @@ def r_OU(t, sigma, tau):
     """
     return sigma ** 2 * torch.exp(- torch.abs(t) / tau)
 
-def r_rational_quadratic(t, sigma, tau, alpha):
+def r_rational_quadratic(t, sigma, tau, alpha, **kwargs):
     """
     Rational quadratic autocorrelation function.
 
@@ -80,7 +80,7 @@ def r_rational_quadratic(t, sigma, tau, alpha):
     """
     return sigma ** 2 * (1 + (t / tau) ** 2 / (2 * alpha)) ** (-alpha)
 
-def r_squared_exp(t, sigma, tau):
+def r_squared_exp(t, sigma, tau, **kwargs):
     """
     Squared exponential autocovariance function.
     
@@ -97,7 +97,7 @@ def r_squared_exp(t, sigma, tau):
     """
     return sigma ** 2 * (torch.exp(- (t / (2 * tau)) ** 2))
 
-def r_matern(t, sigma, tau, nu):
+def r_matern(t, sigma, tau, nu, **kwargs):
     """
     Matern autocorrelation function.
 

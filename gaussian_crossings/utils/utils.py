@@ -11,14 +11,17 @@ def count_upcrossings(x, threshold):
     ----------
     x : torch.Tensor
         1D signal.
-    threshold : float
-        Threshold value.
+    threshold : float or list/tuple of floats
+        Threshold value(s).
 
     Returns
     -------
-    int
-        Number of upcrossings.
+    int or list of ints
+        Number of upcrossings for each threshold.
     """
+    if isinstance(threshold, (list, tuple)):
+        return [count_upcrossings(x, t) for t in threshold]
+
     upcrossings = torch.logical_and(x[:-1] < threshold, x[1:] >= threshold)
     return upcrossings.sum().item()
 
@@ -30,33 +33,39 @@ def count_downcrossings(x, threshold):
     ----------
     x : torch.Tensor
         1D signal.
-    threshold : float
-        Threshold value.
+    threshold : float or list/tuple of floats
+        Threshold value(s).
 
     Returns
     -------
-    int
-        Number of downcrossings.
+    int or list of ints
+        Number of downcrossings for each threshold.
     """
+    if isinstance(threshold, (list, tuple)):
+        return [count_downcrossings(x, t) for t in threshold]
+
     downcrossings = torch.logical_and(x[:-1] > threshold, x[1:] <= threshold)
     return downcrossings.sum().item()
 
 def count_crossings(x, threshold):
     """
-    Count the number of crossings of a threshold in a 1D signal.
+    Count the total number of crossings of a threshold in a 1D signal.
 
     Parameters
     ----------
     x : torch.Tensor
         1D signal.
-    threshold : float
-        Threshold value.
+    threshold : float or list/tuple of floats
+        Threshold value(s).
 
     Returns
     -------
-    int
-        Number of crossings.
+    int or list of ints
+        Total number of crossings (up + down) for each threshold.
     """
+    if isinstance(threshold, (list, tuple)):
+        return [count_crossings(x, t) for t in threshold]
+
     return count_upcrossings(x, threshold) + count_downcrossings(x, threshold)
 
 def upcrossing_times(x, t, threshold):
@@ -69,21 +78,24 @@ def upcrossing_times(x, t, threshold):
         1D signal.
     t : torch.Tensor
         1D tensor of time values corresponding to the signal (assumed to be evenly spaced).
-    threshold : float
-        Threshold value.
+    threshold : float or list/tuple of floats
+        Threshold value(s).
 
     Returns
     -------
-    torch.Tensor
-        Interpolated times of upcrossings.
+    torch.Tensor or list of torch.Tensor
+        Interpolated times of upcrossings for each threshold.
     """
+    if isinstance(threshold, (list, tuple)):
+        return [upcrossing_times(x, t, thr) for thr in threshold]
+
     # Identify segments where x crosses upward through the threshold.
     mask = (x[:-1] < threshold) & (x[1:] >= threshold)
     if not mask.any():
         return x.new_empty(0)
     idx = torch.nonzero(mask).squeeze(-1)
     
-    # Compute the interpolation factor alpha for each crossing.
+    # Compute the interpolation factor for each crossing.
     alpha = (threshold - x[idx]) / (x[idx+1] - x[idx])
     
     # Use the time vector to compute the exact crossing times.
@@ -100,21 +112,24 @@ def downcrossing_times(x, t, threshold):
         1D signal.
     t : torch.Tensor
         1D tensor of time values corresponding to the signal (assumed to be evenly spaced).
-    threshold : float
-        Threshold value.
+    threshold : float or list/tuple of floats
+        Threshold value(s).
 
     Returns
     -------
-    torch.Tensor
-        Interpolated times of downcrossings.
+    torch.Tensor or list of torch.Tensor
+        Interpolated times of downcrossings for each threshold.
     """
+    if isinstance(threshold, (list, tuple)):
+        return [downcrossing_times(x, t, thr) for thr in threshold]
+
     # Identify segments where x crosses downward through the threshold.
     mask = (x[:-1] >= threshold) & (x[1:] < threshold)
     if not mask.any():
         return x.new_empty(0)
     idx = torch.nonzero(mask).squeeze(-1)
     
-    # Compute the interpolation factor alpha for each crossing.
+    # Compute the interpolation factor for each crossing.
     alpha = (x[idx] - threshold) / (x[idx] - x[idx+1])
     
     # Interpolate the crossing times using the time vector.
@@ -124,9 +139,7 @@ def downcrossing_times(x, t, threshold):
 def crossing_times(x, t, threshold):
     """
     Find all threshold crossings (both upcrossings and downcrossings) in a 1D signal using linear interpolation.
-    
-    This function reuses the `upcrossing_times` and `downcrossing_times` functions defined above.
-    It returns the interpolated crossing times along with a direction indicator:
+    For each threshold provided, this returns the crossing times along with a direction indicator:
       +1 for upcrossings and -1 for downcrossings.
 
     Parameters
@@ -135,17 +148,20 @@ def crossing_times(x, t, threshold):
         1D signal.
     t : torch.Tensor
         1D tensor of time values corresponding to the signal (assumed to be evenly spaced).
-    threshold : float
-        Threshold value.
+    threshold : float or list/tuple of floats
+        Threshold value(s).
 
     Returns
     -------
-    times : torch.Tensor
-        1D tensor of interpolated crossing times (sorted in ascending order).
-    directions : torch.Tensor
-        1D tensor of crossing directions corresponding to each time 
-        (+1 for upcrossings, -1 for downcrossings).
+    (torch.Tensor, torch.Tensor) or list of tuples
+        For a single threshold, returns a tuple containing:
+          - times: 1D tensor of interpolated crossing times (sorted in ascending order)
+          - directions: 1D tensor of crossing directions (+1 for upcrossings, -1 for downcrossings).
+        If multiple thresholds are provided, returns a list of such tuples.
     """
+    if isinstance(threshold, (list, tuple)):
+        return [crossing_times(x, t, thr) for thr in threshold]
+
     # Compute the upcrossing and downcrossing times.
     up_times = upcrossing_times(x, t, threshold)
     down_times = downcrossing_times(x, t, threshold)
@@ -164,7 +180,6 @@ def crossing_times(x, t, threshold):
         directions = directions[sort_idx]
     
     return times, directions
-
 
 def euler_maruyama_sde(model, time, dt, x0=None):
     """

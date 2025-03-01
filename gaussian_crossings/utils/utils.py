@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 import math
+import matplotlib.colors as mcolors
 
 
 def count_upcrossings(x, threshold):
@@ -327,4 +328,22 @@ def autocorrelation(x):
     ac = ac / (n - 1)
     return ac
 
+class MidpointNormalize(mcolors.Normalize):
+    def __init__(self, vmin=None, vmax=None, midpoint=None, clip=False):
+        if vmin is None or vmax is None or midpoint is None:
+            raise ValueError("vmin, vmax, and midpoint must all be specified")
+        self.midpoint = midpoint
+        super().__init__(vmin, vmax, clip)
+
+    def __call__(self, value, clip=None):
+        # If the entire dataset is above the midpoint, map vmin to 0.5 and vmax to 1.
+        if self.vmin > self.midpoint:
+            return np.ma.masked_array(np.interp(value, [self.vmin, self.vmax], [0.5, 1]))
+        # If the entire dataset is below the midpoint, map vmin to 0 and vmax to 0.5.
+        elif self.vmax < self.midpoint:
+            return np.ma.masked_array(np.interp(value, [self.vmin, self.vmax], [0, 0.5]))
+        # Otherwise, use a diverging normalization with the midpoint in the center.
+        else:
+            return np.ma.masked_array(np.interp(value, [self.vmin, self.midpoint, self.vmax],
+                                                  [0, 0.5, 1]))
 

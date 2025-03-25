@@ -2,6 +2,7 @@ import torch
 from torch.func import grad, hessian
 import numpy as np
 import scipy.special
+from gaussian_crossings.utils.owensT import owensT
 
 torch.set_default_dtype(torch.float64)
 
@@ -318,7 +319,7 @@ class GaussianUpCrossingsDimless:
                     1 + np.sqrt(torch.pi) * gamma * torch.sqrt(alpha + beta) * torch.exp(expr1) * torch.special.erf(torch.sqrt(expr1))
                 )
                 + torch.pi * ((alpha - beta - 2 * alpha * beta * gamma**2) / (alpha * beta))
-                * scipy.special.owens_t(gamma * torch.sqrt(2 * alpha * beta / (alpha + beta)), torch.sqrt(alpha / beta))
+                * owensT(gamma * torch.sqrt(2 * alpha * beta / (alpha + beta)), torch.sqrt(alpha / beta))
             )
         ) - (1 / (4 * torch.pi**2)) * (q0 / r0) * torch.exp(-(u**2) / r0)
 
@@ -375,7 +376,7 @@ class GaussianUpCrossingsDimless:
                     1 + np.sqrt(torch.pi) * gamma * torch.sqrt(alpha + beta) * torch.exp(expr1) * torch.special.erf(torch.sqrt(expr1))
                 )
                 + 4 * torch.pi * ((alpha - beta - 2 * alpha * beta * gamma**2) / (alpha * beta))
-                * (scipy.special.owens_t(gamma * torch.sqrt(2 * alpha * beta / (alpha + beta)), torch.sqrt(alpha / beta)) - 1 / 8)
+                * (owensT(gamma * torch.sqrt(2 * alpha * beta / (alpha + beta)), torch.sqrt(alpha / beta)) - 1 / 8)
             )
         ) - (1 / (torch.pi**2)) * (q0 / r0) * torch.exp(-(u**2) / r0)
 
@@ -401,7 +402,12 @@ class GaussianUpCrossingsDimless:
         if u is None:
             u = self.u
 
-        t_prime = torch.linspace(epsilon_left, (T / self.tau) / (1 + (T / self.tau)), num_points)
+        if isinstance(self.tau, torch.Tensor):
+            new_tau = self.tau.item()
+        else:
+            new_tau = self.tau
+
+        t_prime = torch.linspace(epsilon_left, (T / new_tau) / (1 + (T / new_tau)), num_points)
         x = t_prime / (1 - t_prime)
         new_integrand_vals = (1 / self.tau) * (1 - self.tau * x / T) * self.upcrossing_integrand(x, u=u) / (1 - t_prime)**2
         left_limit = - (1 / self.tau) * (1 / (4 * torch.pi**2)) * (self.q0 / self.r0) * torch.exp(-(u**2) / self.r0)
@@ -528,8 +534,13 @@ class GaussianUpCrossingsDimless:
         """
         if u is None:
             u = self.u
+        
+        if isinstance(self.tau, torch.Tensor):
+            new_tau = self.tau.item()
+        else:
+            new_tau = self.tau
 
-        t_prime = torch.linspace(epsilon_left, (T / self.tau) / (1 + (T / self.tau)), num_points)
+        t_prime = torch.linspace(epsilon_left, (T / new_tau) / (1 + (T / new_tau)), num_points)
         x = t_prime / (1 - t_prime)
         new_integrand_vals = (1 / self.tau) * (1 - self.tau * x / T) * self.crossing_integrand(x, u=u) / (1 - t_prime)**2
         left_limit = - (1 / self.tau) * (1 / torch.pi**2) * (self.q0 / self.r0) * torch.exp(-(u**2) / self.r0)

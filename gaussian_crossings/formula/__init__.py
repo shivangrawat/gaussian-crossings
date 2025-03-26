@@ -1,2 +1,3 @@
 from .formula import GaussianUpCrossings
 from .formula_dimless import GaussianUpCrossingsDimless
+from .formula_dimless_minimal import GaussianUpCrossingsDimless_minimal

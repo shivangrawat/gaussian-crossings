@@ -34,6 +34,9 @@ class GaussianUpCrossingsDimless_minimal:
         self.args = args
         self.kwargs = kwargs
 
+        # define a small constant to avoid gradient explosion
+        self.eps = 1e-15
+
         # Evaluate r, its first derivative (p), and the second derivative (q) at t = 0.
         self.r0 = self.r(torch.tensor(0.0, dtype=torch.float64))
         self.p0 = torch.tensor(0.0, dtype=torch.float64)
@@ -254,11 +257,11 @@ class GaussianUpCrossingsDimless_minimal:
 
         final_integral = (
             torch.exp(-delta * u**2)
-            / (4 * torch.pi**2 * torch.sqrt(r0**2 - r**2))
+            / (4 * torch.pi**2 * torch.sqrt(torch.abs(r0**2 - r**2)))
             * (
                 (torch.exp(-alpha * gamma**2) / (2 * torch.sqrt(alpha * beta)))
                 * (
-                    1 + torch.sqrt(torch.tensor(torch.pi)) * gamma * torch.sqrt(alpha + beta) * torch.exp(expr1) * torch.special.erf(torch.sqrt(expr1))
+                    1 + torch.sqrt(torch.tensor(torch.pi)) * gamma * torch.sqrt(alpha + beta) * torch.exp(expr1) * torch.special.erf(torch.sqrt(expr1 + self.eps))
                 )
                 + torch.pi * ((alpha - beta - 2 * alpha * beta * gamma**2) / (alpha * beta))
                 * owensT(gamma * torch.sqrt(2 * alpha * beta / (alpha + beta)), torch.sqrt(alpha / beta))

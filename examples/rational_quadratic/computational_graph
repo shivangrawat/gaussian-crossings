@@ -1,0 +1,1507 @@
+digraph {
+	graph [size="123.44999999999999,123.44999999999999"]
+	node [align=left fontname=monospace fontsize=10 height=0.2 ranksep=0.1 shape=box style=filled]
+	4952032352 [label="
+ ()" fillcolor=darkolivegreen1]
+	4951724416 [label="AddBackward0
+------------
+alpha: 1"]
+	4951726912 -> 4951724416
+	4951726912 -> 4952038912 [dir=none]
+	4952038912 [label="self
+ ()" fillcolor=orange]
+	4951726912 [label="PowBackward0
+------------------------
+exponent:              2
+self    : [saved tensor]"]
+	4925521104 -> 4951726912
+	4925521104 [label="SubBackward0
+------------
+alpha: 1"]
+	4950979152 -> 4925521104
+	4950979152 -> 4952039072 [dir=none]
+	4952039072 [label="other
+ ()" fillcolor=orange]
+	4950979152 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self :           None"]
+	4951727392 -> 4950979152
+	4951727392 -> 4952032512 [dir=none]
+	4952032512 [label="other
+ ()" fillcolor=orange]
+	4951727392 -> 4952031792 [dir=none]
+	4952031792 [label="self
+ ()" fillcolor=orange]
+	4951727392 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self : [saved tensor]"]
+	4951727200 -> 4951727392
+	4951727200 -> 4952032272 [dir=none]
+	4952032272 [label="other
+ ()" fillcolor=orange]
+	4951727200 -> 4952032432 [dir=none]
+	4952032432 [label="self
+ ()" fillcolor=orange]
+	4951727200 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self : [saved tensor]"]
+	4951726288 -> 4951727200
+	4951726288 -> 4952039712 [dir=none]
+	4952039712 [label="other
+ ()" fillcolor=orange]
+	4951726288 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self :           None"]
+	4951724896 -> 4951726288
+	4951724896 -> 4952039952 [dir=none]
+	4952039952 [label="other
+ ()" fillcolor=orange]
+	4951724896 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self :           None"]
+	4951724704 -> 4951724896
+	4951724704 -> 4952040192 [dir=none]
+	4952040192 [label="result
+ ()" fillcolor=orange]
+	4951724704 [label="ReciprocalBackward0
+----------------------
+result: [saved tensor]"]
+	4950979200 -> 4951724704
+	4950979200 -> 4952040352 [dir=none]
+	4952040352 [label="result
+ ()" fillcolor=orange]
+	4950979200 [label="ExpBackward0
+----------------------
+result: [saved tensor]"]
+	4951729312 -> 4950979200
+	4921227328 [label="log_tau
+ ()" fillcolor=lightblue]
+	4921227328 -> 4951729312
+	4951729312 [label=AccumulateGrad]
+	4951726144 -> 4951727200
+	4951726144 -> 4952040912 [dir=none]
+	4952040912 [label="result
+ ()" fillcolor=orange]
+	4951726144 [label="SqrtBackward0
+----------------------
+result: [saved tensor]"]
+	4951726768 -> 4951726144
+	4951726768 -> 4952031712 [dir=none]
+	4952031712 [label="other
+ ()" fillcolor=orange]
+	4951726768 -> 4951167120 [dir=none]
+	4951167120 [label="self
+ ()" fillcolor=orange]
+	4951726768 [label="DivBackward0
+---------------------
+other: [saved tensor]
+self : [saved tensor]"]
+	4951725040 -> 4951726768
+	4951725040 [label=NegBackward0]
+	4951723360 -> 4951725040
+	4951723360 -> 4952041472 [dir=none]
+	4952041472 [label="other
+ ()" fillcolor=orange]
+	4951723360 [label="DivBackward0
+---------------------
+other: [saved tensor]
+self :           None"]
+	4951723312 -> 4951723360
+	4951723312 [label="AddBackward0
+------------
+alpha: 1"]
+	4951723984 -> 4951723312
+	4951723984 -> 4952041792 [dir=none]
+	4952041792 [label="other
+ ()" fillcolor=orange]
+	4951723984 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self :           None"]
+	4951723456 -> 4951723984
+	4951723456 [label="MulBackward1
+------------
+other: 2.0"]
+	4951725664 -> 4951723456
+	4951725664 -> 4952042112 [dir=none]
+	4952042112 [label="self
+ ()" fillcolor=orange]
+	4951725664 [label="MulBackward0
+---------------------
+other:           None
+self : [saved tensor]"]
+	4951722112 -> 4951725664
+	4951722112 -> 4952042352 [dir=none]
+	4952042352 [label="other
+ ()" fillcolor=orange]
+	4951722112 [label="DivBackward0
+---------------------
+other: [saved tensor]
+self :           None"]
+	4951724320 -> 4951722112
+	4951724320 -> 4952042592 [dir=none]
+	4952042592 [label="other
+ ()" fillcolor=orange]
+	4951724320 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self :           None"]
+	4951721584 -> 4951724320
+	4951721584 -> 4952042832 [dir=none]
+	4952042832 [label="self
+ ()" fillcolor=orange]
+	4951721584 [label="MulBackward0
+---------------------
+other:           None
+self : [saved tensor]"]
+	4951728976 -> 4951721584
+	4951728976 -> 4952015328 [dir=none]
+	4952015328 [label="self
+ ()" fillcolor=orange]
+	4951728976 [label="PowBackward0
+------------------------
+exponent:              2
+self    : [saved tensor]"]
+	4951726816 -> 4951728976
+	4951726816 -> 4952043392 [dir=none]
+	4952043392 [label="result
+ ()" fillcolor=orange]
+	4951726816 [label="ExpBackward0
+----------------------
+result: [saved tensor]"]
+	4951728064 -> 4951726816
+	4952015488 [label="log_sigma
+ ()" fillcolor=lightblue]
+	4952015488 -> 4951728064
+	4951728064 [label=AccumulateGrad]
+	4951723936 -> 4951723312
+	4951723936 -> 4952043712 [dir=none]
+	4952043712 [label="other
+ ()" fillcolor=orange]
+	4951723936 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self :           None"]
+	4951721728 -> 4951723936
+	4951721728 -> 4952042352 [dir=none]
+	4952042352 [label="other
+ ()" fillcolor=orange]
+	4951721728 [label="DivBackward0
+---------------------
+other: [saved tensor]
+self :           None"]
+	4951727872 -> 4951721728
+	4951727872 -> 4952044112 [dir=none]
+	4952044112 [label="other
+ ()" fillcolor=orange]
+	4951727872 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self :           None"]
+	4951725424 -> 4951727872
+	4951725424 [label="MulBackward1
+------------
+other: -1.5"]
+	4951726960 -> 4951725424
+	4951726960 -> 4952044432 [dir=none]
+	4952044432 [label="self
+ ()" fillcolor=orange]
+	4951726960 [label="MulBackward0
+---------------------
+other:           None
+self : [saved tensor]"]
+	4951721584 -> 4951726960
+	4951723504 -> 4951726768
+	4951723504 -> 4952015008 [dir=none]
+	4952015008 [label="other
+ ()" fillcolor=orange]
+	4951723504 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self :           None"]
+	4951724368 -> 4951723504
+	4951724368 -> 4952015328 [dir=none]
+	4952015328 [label="self
+ ()" fillcolor=orange]
+	4951724368 [label="PowBackward0
+------------------------
+exponent:              2
+self    : [saved tensor]"]
+	4951726816 -> 4951724368
+	4951726096 -> 4951727392
+	4951726096 -> 4952045152 [dir=none]
+	4952045152 [label="result
+ ()" fillcolor=orange]
+	4951726096 [label="ExpBackward0
+----------------------
+result: [saved tensor]"]
+	4951724656 -> 4951726096
+	4951724656 -> 4952045472 [dir=none]
+	4952045472 [label="other
+ ()" fillcolor=orange]
+	4951724656 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self :           None"]
+	4951723888 -> 4951724656
+	4951723888 -> 4952045632 [dir=none]
+	4952045632 [label="result
+ ()" fillcolor=orange]
+	4951723888 [label="ReciprocalBackward0
+----------------------
+result: [saved tensor]"]
+	4951724224 -> 4951723888
+	4951724224 -> 4952045792 [dir=none]
+	4952045792 [label="other
+ ()" fillcolor=orange]
+	4951724224 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self :           None"]
+	4951723504 -> 4951724224
+	4951727344 -> 4951724416
+	4951727344 -> 4952038432 [dir=none]
+	4952038432 [label="self
+ ()" fillcolor=orange]
+	4951727344 [label="PowBackward0
+------------------------
+exponent:              2
+self    : [saved tensor]"]
+	4945066928 -> 4951727344
+	4945066928 [label="SubBackward0
+------------
+alpha: 1"]
+	4951725136 -> 4945066928
+	4951725136 -> 4952046432 [dir=none]
+	4952046432 [label="other
+ ()" fillcolor=orange]
+	4951725136 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self :           None"]
+	4951727104 -> 4951725136
+	4951727104 [label="AddBackward0
+------------
+alpha: 1"]
+	4951726240 -> 4951727104
+	4951726240 -> 4952038832 [dir=none]
+	4952038832 [label="other
+ ()" fillcolor=orange]
+	4951726240 -> 4952038512 [dir=none]
+	4952038512 [label="self
+ ()" fillcolor=orange]
+	4951726240 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self : [saved tensor]"]
+	4951728112 -> 4951726240
+	4951728112 -> 4952038752 [dir=none]
+	4952038752 [label="other
+ ()" fillcolor=orange]
+	4951728112 -> 4848140064 [dir=none]
+	4848140064 [label="self
+ ()" fillcolor=orange]
+	4951728112 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self : [saved tensor]"]
+	4951728016 -> 4951728112
+	4951728016 -> 4952047232 [dir=none]
+	4952047232 [label="other
+ ()" fillcolor=orange]
+	4951728016 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self :           None"]
+	4951728448 -> 4951728016
+	4951728448 -> 4952047472 [dir=none]
+	4952047472 [label="other
+ ()" fillcolor=orange]
+	4951728448 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self :           None"]
+	4951728688 -> 4951728448
+	4951728688 -> 4963549344 [dir=none]
+	4963549344 [label="result
+ ()" fillcolor=orange]
+	4951728688 [label="ReciprocalBackward0
+----------------------
+result: [saved tensor]"]
+	4950979200 -> 4951728688
+	4951728304 -> 4951728112
+	4951728304 -> 4963549664 [dir=none]
+	4963549664 [label="result
+ ()" fillcolor=orange]
+	4951728304 [label="SqrtBackward0
+----------------------
+result: [saved tensor]"]
+	4951728160 -> 4951728304
+	4951728160 -> 4952031712 [dir=none]
+	4952031712 [label="other
+ ()" fillcolor=orange]
+	4951728160 -> 4951167120 [dir=none]
+	4951167120 [label="self
+ ()" fillcolor=orange]
+	4951728160 [label="DivBackward0
+---------------------
+other: [saved tensor]
+self : [saved tensor]"]
+	4951725040 -> 4951728160
+	4951723504 -> 4951728160
+	4951723168 -> 4951726240
+	4951723168 -> 4963550304 [dir=none]
+	4963550304 [label="result
+ ()" fillcolor=orange]
+	4951723168 [label="ExpBackward0
+----------------------
+result: [saved tensor]"]
+	4951728880 -> 4951723168
+	4951728880 -> 4963550624 [dir=none]
+	4963550624 [label="other
+ ()" fillcolor=orange]
+	4951728880 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self :           None"]
+	4951728736 -> 4951728880
+	4951728736 -> 4963550784 [dir=none]
+	4963550784 [label="result
+ ()" fillcolor=orange]
+	4951728736 [label="ReciprocalBackward0
+----------------------
+result: [saved tensor]"]
+	4951729024 -> 4951728736
+	4951729024 -> 4963550944 [dir=none]
+	4963550944 [label="other
+ ()" fillcolor=orange]
+	4951729024 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self :           None"]
+	4951723504 -> 4951729024
+	4951728352 -> 4951727104
+	4951728352 -> 4963551344 [dir=none]
+	4963551344 [label="other
+ ()" fillcolor=orange]
+	4951728352 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self :           None"]
+	4951728400 -> 4951728352
+	4951728400 [label="AddBackward0
+------------
+alpha: 1"]
+	4951729072 -> 4951728400
+	4951729072 -> 4963551664 [dir=none]
+	4963551664 [label="other
+ ()" fillcolor=orange]
+	4951729072 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self :           None"]
+	4951729216 -> 4951729072
+	4951729216 -> 4952038352 [dir=none]
+	4952038352 [label="other
+ ()" fillcolor=orange]
+	4951729216 -> 4952037632 [dir=none]
+	4952037632 [label="self
+ ()" fillcolor=orange]
+	4951729216 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self : [saved tensor]"]
+	4951729360 -> 4951729216
+	4951729360 -> 4952035072 [dir=none]
+	4952035072 [label="other
+ ()" fillcolor=orange]
+	4951729360 -> 4952038272 [dir=none]
+	4952038272 [label="self
+ ()" fillcolor=orange]
+	4951729360 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self : [saved tensor]"]
+	4951729504 -> 4951729360
+	4951729504 -> 4963552384 [dir=none]
+	4963552384 [label="other
+ ()" fillcolor=orange]
+	4951729504 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self :           None"]
+	4951729744 -> 4951729504
+	4951729744 [label=NegBackward0]
+	4951723648 -> 4951729744
+	4951723648 -> 4963552784 [dir=none]
+	4963552784 [label="other
+ ()" fillcolor=orange]
+	4951723648 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self :           None"]
+	4951729840 -> 4951723648
+	4951729840 -> 4963553024 [dir=none]
+	4963553024 [label="result
+ ()" fillcolor=orange]
+	4951729840 [label="ReciprocalBackward0
+----------------------
+result: [saved tensor]"]
+	4950979200 -> 4951729840
+	4951729456 -> 4951729360
+	4951729456 -> 4952031712 [dir=none]
+	4952031712 [label="other
+ ()" fillcolor=orange]
+	4951729456 -> 4951167120 [dir=none]
+	4951167120 [label="self
+ ()" fillcolor=orange]
+	4951729456 [label="DivBackward0
+---------------------
+other: [saved tensor]
+self : [saved tensor]"]
+	4951725040 -> 4951729456
+	4951723504 -> 4951729456
+	4951728496 -> 4951729216
+	4951728496 -> 4963553744 [dir=none]
+	4963553744 [label="result
+ ()" fillcolor=orange]
+	4951728496 [label="ExpBackward0
+----------------------
+result: [saved tensor]"]
+	4951729792 -> 4951728496
+	4951729792 -> 4963554064 [dir=none]
+	4963554064 [label="other
+ ()" fillcolor=orange]
+	4951729792 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self :           None"]
+	4951729984 -> 4951729792
+	4951729984 -> 4963554224 [dir=none]
+	4963554224 [label="result
+ ()" fillcolor=orange]
+	4951729984 [label="ReciprocalBackward0
+----------------------
+result: [saved tensor]"]
+	4951723504 -> 4951729984
+	4951724992 -> 4951728400
+	4951724992 [label="DivBackward1
+------------
+other: 2.0"]
+	4951723696 -> 4951724992
+	4951723696 [label="SumBackward1
+----------------------
+dim           :   (0,)
+keepdim       :  False
+self_sym_sizes: (998,)"]
+	4951729936 -> 4951723696
+	4951729936 -> 4963554624 [dir=none]
+	4963554624 [label="other
+ (998)" fillcolor=orange]
+	4951729936 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self :           None"]
+	4951729888 -> 4951729936
+	4951729888 [label="AddBackward0
+------------
+alpha: 1"]
+	4951730128 -> 4951729888
+	4951730128 [label="SliceBackward0
+------------------------------------
+dim           :                    0
+end           : 18446744073709551615
+self_sym_sizes:               (999,)
+start         :                    0
+step          :                    1"]
+	4951729696 -> 4951730128
+	4951729696 -> 4952038672 [dir=none]
+	4952038672 [label="indices[0]
+ (1000)" fillcolor=orange]
+	4951729696 [label="IndexBackward0
+-------------------------------
+indices       : [saved tensors]
+self_sym_sizes:         (1000,)"]
+	4950932304 -> 4951729696
+	4950932304 -> 4952038112 [dir=none]
+	4952038112 [label="other
+ (1000)" fillcolor=orange]
+	4950932304 [label="DivBackward0
+---------------------
+other: [saved tensor]
+self :           None"]
+	4951730464 -> 4950932304
+	4951730464 -> 4952038192 [dir=none]
+	4952038192 [label="other
+ (1000)" fillcolor=orange]
+	4951730464 -> 4952032832 [dir=none]
+	4952032832 [label="self
+ (1000)" fillcolor=orange]
+	4951730464 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self : [saved tensor]"]
+	4951730512 -> 4951730464
+	4951730512 -> 4952032592 [dir=none]
+	4952032592 [label="other
+ (1000)" fillcolor=orange]
+	4951730512 -> 4952032752 [dir=none]
+	4952032752 [label="self
+ ()" fillcolor=orange]
+	4951730512 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self : [saved tensor]"]
+	4951730656 -> 4951730512
+	4951730656 -> 4963555904 [dir=none]
+	4963555904 [label="other
+ ()" fillcolor=orange]
+	4951730656 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self :           None"]
+	4951730848 -> 4951730656
+	4951730848 -> 4963556144 [dir=none]
+	4963556144 [label="result
+ ()" fillcolor=orange]
+	4951730848 [label="ReciprocalBackward0
+----------------------
+result: [saved tensor]"]
+	4950979200 -> 4951730848
+	4951730368 -> 4951730512
+	4951730368 [label="RsubBackward1
+-------------
+alpha: 1"]
+	4951730992 -> 4951730368
+	4951730992 -> 4963556544 [dir=none]
+	4963556544 [label="other
+ ()" fillcolor=orange]
+	4951730992 [label="DivBackward0
+---------------------
+other: [saved tensor]
+self :           None"]
+	4951731040 -> 4951730992
+	4951731040 -> 4952032672 [dir=none]
+	4952032672 [label="other
+ (1000)" fillcolor=orange]
+	4951731040 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self :           None"]
+	4950979200 -> 4951731040
+	4951730416 -> 4951730464
+	4951730416 [label="SubBackward0
+------------
+alpha: 1"]
+	4951730752 -> 4951730416
+	4951730752 -> 4952037952 [dir=none]
+	4952037952 [label="other
+ (1000)" fillcolor=orange]
+	4951730752 -> 4952035392 [dir=none]
+	4952035392 [label="self
+ (1000)" fillcolor=orange]
+	4951730752 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self : [saved tensor]"]
+	4951731328 -> 4951730752
+	4951731328 -> 4952035472 [dir=none]
+	4952035472 [label="other
+ (1000)" fillcolor=orange]
+	4951731328 -> 4952035232 [dir=none]
+	4952035232 [label="self
+ (1000)" fillcolor=orange]
+	4951731328 [label="DivBackward0
+---------------------
+other: [saved tensor]
+self : [saved tensor]"]
+	4951731376 -> 4951731328
+	4951731376 -> 4963557504 [dir=none]
+	4963557504 [label="result
+ (1000)" fillcolor=orange]
+	4951731376 [label="ExpBackward0
+----------------------
+result: [saved tensor]"]
+	4951730800 -> 4951731376
+	4951730800 -> 4963557904 [dir=none]
+	4963557904 [label="other
+ ()" fillcolor=orange]
+	4951730800 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self :           None"]
+	4951731568 -> 4951730800
+	4951731568 [label=NegBackward0]
+	4951731664 -> 4951731568
+	4951731664 -> 4963558224 [dir=none]
+	4963558224 [label="other
+ ()" fillcolor=orange]
+	4951731664 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self :           None"]
+	4951731808 -> 4951731664
+	4951731808 -> 4963558464 [dir=none]
+	4963558464 [label="result
+ (1000)" fillcolor=orange]
+	4951731808 [label="ReciprocalBackward0
+----------------------
+result: [saved tensor]"]
+	4951731856 -> 4951731808
+	4951731856 [label="AddBackward0
+------------
+alpha: 1"]
+	4951731472 -> 4951731856
+	4951731472 -> 4952033152 [dir=none]
+	4952033152 [label="other
+ (1000)" fillcolor=orange]
+	4951731472 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self :           None"]
+	4951732144 -> 4951731472
+	4951732144 -> 4952015328 [dir=none]
+	4952015328 [label="self
+ ()" fillcolor=orange]
+	4951732144 [label="PowBackward0
+------------------------
+exponent:              2
+self    : [saved tensor]"]
+	4951726816 -> 4951732144
+	4951723504 -> 4951731856
+	4951730896 -> 4951731328
+	4951730896 -> 4963559024 [dir=none]
+	4963559024 [label="other
+ ()" fillcolor=orange]
+	4951730896 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self :           None"]
+	4951731760 -> 4951730896
+	4951731760 -> 4963559504 [dir=none]
+	4963559504 [label="result
+ (1000)" fillcolor=orange]
+	4951731760 [label="SqrtBackward0
+----------------------
+result: [saved tensor]"]
+	4951731952 -> 4951731760
+	4951731952 [label="SubBackward0
+------------
+alpha: 1"]
+	4951731616 -> 4951731952
+	4951731616 -> 4952031712 [dir=none]
+	4952031712 [label="self
+ ()" fillcolor=orange]
+	4951731616 [label="PowBackward0
+------------------------
+exponent:              2
+self    : [saved tensor]"]
+	4951723504 -> 4951731616
+	4951732240 -> 4951731952
+	4951732240 -> 4952033072 [dir=none]
+	4952033072 [label="self
+ (1000)" fillcolor=orange]
+	4951732240 [label="PowBackward0
+------------------------
+exponent:              2
+self    : [saved tensor]"]
+	4951732384 -> 4951732240
+	4951732384 -> 4952032992 [dir=none]
+	4952032992 [label="other
+ (1000)" fillcolor=orange]
+	4951732384 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self :           None"]
+	4951732000 -> 4951732384
+	4951732000 -> 4952015328 [dir=none]
+	4952015328 [label="self
+ ()" fillcolor=orange]
+	4951732000 [label="PowBackward0
+------------------------
+exponent:              2
+self    : [saved tensor]"]
+	4951726816 -> 4951732000
+	4951731136 -> 4951730752
+	4951731136 [label="AddBackward0
+------------
+alpha: 1"]
+	4951732096 -> 4951731136
+	4951732096 -> 4952036672 [dir=none]
+	4952036672 [label="other
+ (1000)" fillcolor=orange]
+	4951732096 -> 4952035792 [dir=none]
+	4952035792 [label="self
+ (1000)" fillcolor=orange]
+	4951732096 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self : [saved tensor]"]
+	4951732432 -> 4951732096
+	4951732432 -> 4952035632 [dir=none]
+	4952035632 [label="other
+ (1000)" fillcolor=orange]
+	4951732432 -> 4952035712 [dir=none]
+	4952035712 [label="self
+ (1000)" fillcolor=orange]
+	4951732432 [label="DivBackward0
+---------------------
+other: [saved tensor]
+self : [saved tensor]"]
+	4951732336 -> 4951732432
+	4951732336 -> 4963561104 [dir=none]
+	4963561104 [label="result
+ (1000)" fillcolor=orange]
+	4951732336 [label="ExpBackward0
+----------------------
+result: [saved tensor]"]
+	4951731088 -> 4951732336
+	4951731088 -> 4952035552 [dir=none]
+	4952035552 [label="other
+ (1000)" fillcolor=orange]
+	4951731088 -> 4952035312 [dir=none]
+	4952035312 [label="self
+ (1000)" fillcolor=orange]
+	4951731088 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self : [saved tensor]"]
+	4951732672 -> 4951731088
+	4951732672 [label=NegBackward0]
+	4951732816 -> 4951732672
+	4951732816 -> 4952034032 [dir=none]
+	4952034032 [label="self
+ (1000)" fillcolor=orange]
+	4951732816 [label="AbsBackward0
+--------------------
+self: [saved tensor]"]
+	4950979296 -> 4951732816
+	4950979296 -> 4952033792 [dir=none]
+	4952033792 [label="other
+ (1000)" fillcolor=orange]
+	4950979296 -> 4952033552 [dir=none]
+	4952033552 [label="self
+ (1000)" fillcolor=orange]
+	4950979296 [label="DivBackward0
+---------------------
+other: [saved tensor]
+self : [saved tensor]"]
+	4951732912 -> 4950979296
+	4951732912 [label=NegBackward0]
+	4951733056 -> 4951732912
+	4951733056 [label="AddBackward0
+------------
+alpha: 1"]
+	4951731472 -> 4951733056
+	4951723504 -> 4951733056
+	4951732768 -> 4950979296
+	4951732768 -> 4963562624 [dir=none]
+	4963562624 [label="other
+ ()" fillcolor=orange]
+	4951732768 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self :           None"]
+	4951732960 -> 4951732768
+	4951732960 [label="AddBackward0
+------------
+alpha: 1"]
+	4951733200 -> 4951732960
+	4951733200 -> 4952033632 [dir=none]
+	4952033632 [label="self
+ (1000)" fillcolor=orange]
+	4951733200 [label="PowBackward0
+------------------------
+exponent:              2
+self    : [saved tensor]"]
+	4951733248 -> 4951733200
+	4951733248 -> 4963563264 [dir=none]
+	4963563264 [label="other
+ ()" fillcolor=orange]
+	4951733248 [label="DivBackward0
+---------------------
+other: [saved tensor]
+self :           None"]
+	4951733392 -> 4951733248
+	4951733392 -> 4963563344 [dir=none]
+	4963563344 [label="other
+ (1000)" fillcolor=orange]
+	4951733392 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self :           None"]
+	4951733344 -> 4951733392
+	4951733344 -> 4963563504 [dir=none]
+	4963563504 [label="other
+ ()" fillcolor=orange]
+	4951733344 [label="DivBackward0
+---------------------
+other: [saved tensor]
+self :           None"]
+	4951733488 -> 4951733344
+	4951733488 -> 4963563824 [dir=none]
+	4963563824 [label="other
+ (1000)" fillcolor=orange]
+	4951733488 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self :           None"]
+	4951733728 -> 4951733488
+	4951733728 -> 4963563984 [dir=none]
+	4963563984 [label="self
+ (1000)" fillcolor=orange]
+	4951733728 [label="MulBackward0
+---------------------
+other:           None
+self : [saved tensor]"]
+	4951733824 -> 4951733728
+	4951733824 -> 4952015328 [dir=none]
+	4952015328 [label="self
+ ()" fillcolor=orange]
+	4951733824 [label="PowBackward0
+------------------------
+exponent:              2
+self    : [saved tensor]"]
+	4951726816 -> 4951733824
+	4951733296 -> 4951732960
+	4951733296 -> 4952032912 [dir=none]
+	4952032912 [label="other
+ (1000)" fillcolor=orange]
+	4951733296 -> 4952033952 [dir=none]
+	4952033952 [label="self
+ (1000)" fillcolor=orange]
+	4951733296 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self : [saved tensor]"]
+	4951733584 -> 4951733296
+	4951733584 [label="SubBackward0
+------------
+alpha: 1"]
+	4951733536 -> 4951733584
+	4951733536 [label=NegBackward0]
+	4951733968 -> 4951733536
+	4951733968 -> 4963565024 [dir=none]
+	4963565024 [label="other
+ ()" fillcolor=orange]
+	4951733968 [label="DivBackward0
+---------------------
+other: [saved tensor]
+self :           None"]
+	4951733680 -> 4951733968
+	4951733680 [label="AddBackward0
+------------
+alpha: 1"]
+	4951733920 -> 4951733680
+	4951733920 -> 4963565344 [dir=none]
+	4963565344 [label="other
+ (1000)" fillcolor=orange]
+	4951733920 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self :           None"]
+	4951734064 -> 4951733920
+	4951734064 [label="MulBackward1
+------------
+other: 2.0"]
+	4951734304 -> 4951734064
+	4951734304 -> 4963582112 [dir=none]
+	4963582112 [label="self
+ (1000)" fillcolor=orange]
+	4951734304 [label="MulBackward0
+---------------------
+other:           None
+self : [saved tensor]"]
+	4951734448 -> 4951734304
+	4951734448 -> 4963582272 [dir=none]
+	4963582272 [label="other
+ ()" fillcolor=orange]
+	4951734448 [label="DivBackward0
+---------------------
+other: [saved tensor]
+self :           None"]
+	4951734496 -> 4951734448
+	4951734496 -> 4963582592 [dir=none]
+	4963582592 [label="other
+ (1000)" fillcolor=orange]
+	4951734496 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self :           None"]
+	4951734592 -> 4951734496
+	4951734592 -> 4963582752 [dir=none]
+	4963582752 [label="self
+ (1000)" fillcolor=orange]
+	4951734592 [label="MulBackward0
+---------------------
+other:           None
+self : [saved tensor]"]
+	4951734688 -> 4951734592
+	4951734688 -> 4952015328 [dir=none]
+	4952015328 [label="self
+ ()" fillcolor=orange]
+	4951734688 [label="PowBackward0
+------------------------
+exponent:              2
+self    : [saved tensor]"]
+	4951726816 -> 4951734688
+	4951734112 -> 4951733680
+	4951734112 -> 4963583312 [dir=none]
+	4963583312 [label="other
+ (1000)" fillcolor=orange]
+	4951734112 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self :           None"]
+	4951734544 -> 4951734112
+	4951734544 -> 4963582272 [dir=none]
+	4963582272 [label="other
+ ()" fillcolor=orange]
+	4951734544 [label="DivBackward0
+---------------------
+other: [saved tensor]
+self :           None"]
+	4951734736 -> 4951734544
+	4951734736 -> 4963583712 [dir=none]
+	4963583712 [label="other
+ (1000)" fillcolor=orange]
+	4951734736 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self :           None"]
+	4951734832 -> 4951734736
+	4951734832 [label="MulBackward1
+------------
+other: -1.5"]
+	4951734640 -> 4951734832
+	4951734640 -> 4963584032 [dir=none]
+	4963584032 [label="self
+ (1000)" fillcolor=orange]
+	4951734640 [label="MulBackward0
+---------------------
+other:           None
+self : [saved tensor]"]
+	4951734592 -> 4951734640
+	4951725040 -> 4951733584
+	4951733440 -> 4951733296
+	4951733440 [label="AddBackward0
+------------
+alpha: 1"]
+	4951731472 -> 4951733440
+	4951723504 -> 4951733440
+	4951732624 -> 4951731088
+	4951732624 -> 4952034992 [dir=none]
+	4952034992 [label="self
+ (1000)" fillcolor=orange]
+	4951732624 [label="PowBackward0
+------------------------
+exponent:              2
+self    : [saved tensor]"]
+	4944805792 -> 4951732624
+	4944805792 -> 4963584992 [dir=none]
+	4963584992 [label="other
+ ()" fillcolor=orange]
+	4944805792 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self :           None"]
+	4951731424 -> 4944805792
+	4951731424 -> 4952034832 [dir=none]
+	4952034832 [label="other
+ (1000)" fillcolor=orange]
+	4951731424 -> 4952034672 [dir=none]
+	4952034672 [label="self
+ (1000)" fillcolor=orange]
+	4951731424 [label="DivBackward0
+---------------------
+other: [saved tensor]
+self : [saved tensor]"]
+	4951733008 -> 4951731424
+	4951733008 -> 4952034752 [dir=none]
+	4952034752 [label="self
+ ()" fillcolor=orange]
+	4951733008 [label="MulBackward0
+---------------------
+other:           None
+self : [saved tensor]"]
+	4951733248 -> 4951733008
+	4951733776 -> 4951731424
+	4951733776 [label="AddBackward0
+------------
+alpha: 1"]
+	4951731472 -> 4951733776
+	4951723504 -> 4951733776
+	4951732480 -> 4951732432
+	4951732480 -> 4963585792 [dir=none]
+	4963585792 [label="other
+ ()" fillcolor=orange]
+	4951732480 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self :           None"]
+	4951733104 -> 4951732480
+	4951733104 -> 4963586032 [dir=none]
+	4963586032 [label="result
+ (1000)" fillcolor=orange]
+	4951733104 [label="SqrtBackward0
+----------------------
+result: [saved tensor]"]
+	4951732720 -> 4951733104
+	4951732720 -> 4952034112 [dir=none]
+	4952034112 [label="other
+ (1000)" fillcolor=orange]
+	4951732720 -> 4952033872 [dir=none]
+	4952033872 [label="self
+ (1000)" fillcolor=orange]
+	4951732720 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self : [saved tensor]"]
+	4951732816 -> 4951732720
+	4951733152 -> 4951732720
+	4951733152 -> 4952034512 [dir=none]
+	4952034512 [label="self
+ (1000)" fillcolor=orange]
+	4951733152 [label="AbsBackward0
+--------------------
+self: [saved tensor]"]
+	4951734784 -> 4951733152
+	4951734784 -> 4952034432 [dir=none]
+	4952034432 [label="other
+ (1000)" fillcolor=orange]
+	4951734784 -> 4952034192 [dir=none]
+	4952034192 [label="self
+ (1000)" fillcolor=orange]
+	4951734784 [label="DivBackward0
+---------------------
+other: [saved tensor]
+self : [saved tensor]"]
+	4951734880 -> 4951734784
+	4951734880 [label=NegBackward0]
+	4951734160 -> 4951734880
+	4951734160 [label="SubBackward0
+------------
+alpha: 1"]
+	4951723504 -> 4951734160
+	4951731472 -> 4951734160
+	4951733632 -> 4951734784
+	4951733632 -> 4963587392 [dir=none]
+	4963587392 [label="other
+ ()" fillcolor=orange]
+	4951733632 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self :           None"]
+	4951734016 -> 4951733632
+	4951734016 [label="AddBackward0
+------------
+alpha: 1"]
+	4951734256 -> 4951734016
+	4951734256 -> 4952033632 [dir=none]
+	4952033632 [label="self
+ (1000)" fillcolor=orange]
+	4951734256 [label="PowBackward0
+------------------------
+exponent:              2
+self    : [saved tensor]"]
+	4951733248 -> 4951734256
+	4951734928 -> 4951734016
+	4951734928 -> 4952034352 [dir=none]
+	4952034352 [label="other
+ (1000)" fillcolor=orange]
+	4951734928 -> 4952034272 [dir=none]
+	4952034272 [label="self
+ (1000)" fillcolor=orange]
+	4951734928 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self : [saved tensor]"]
+	4951734208 -> 4951734928
+	4951734208 [label="AddBackward0
+------------
+alpha: 1"]
+	4951733536 -> 4951734208
+	4951725040 -> 4951734208
+	4951734976 -> 4951734928
+	4951734976 [label="SubBackward0
+------------
+alpha: 1"]
+	4951731472 -> 4951734976
+	4951723504 -> 4951734976
+	4951732288 -> 4951732096
+	4951732288 [label="AddBackward0
+------------
+alpha: 1"]
+	4951734400 -> 4951732288
+	4951734400 -> 4952036512 [dir=none]
+	4952036512 [label="other
+ (1000)" fillcolor=orange]
+	4951734400 -> 4952036352 [dir=none]
+	4952036352 [label="self
+ (1000)" fillcolor=orange]
+	4951734400 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self : [saved tensor]"]
+	4951733872 -> 4951734400
+	4951733872 -> 4952036272 [dir=none]
+	4952036272 [label="other
+ (1000)" fillcolor=orange]
+	4951733872 -> 4952036112 [dir=none]
+	4952036112 [label="self
+ (1000)" fillcolor=orange]
+	4951733872 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self : [saved tensor]"]
+	4951735072 -> 4951733872
+	4951735072 -> 4952036192 [dir=none]
+	4952036192 [label="other
+ (1000)" fillcolor=orange]
+	4951735072 -> 4952035952 [dir=none]
+	4952035952 [label="self
+ (1000)" fillcolor=orange]
+	4951735072 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self : [saved tensor]"]
+	4951735120 -> 4951735072
+	4951735120 -> 4952036032 [dir=none]
+	4952036032 [label="self
+ ()" fillcolor=orange]
+	4951735120 [label="MulBackward0
+---------------------
+other:           None
+self : [saved tensor]"]
+	4944805792 -> 4951735120
+	4951735264 -> 4951735072
+	4951735264 -> 4963589712 [dir=none]
+	4963589712 [label="result
+ (1000)" fillcolor=orange]
+	4951735264 [label="SqrtBackward0
+----------------------
+result: [saved tensor]"]
+	4951735504 -> 4951735264
+	4951735504 [label="AddBackward0
+------------
+alpha: 1"]
+	4951732816 -> 4951735504
+	4951733152 -> 4951735504
+	4951734352 -> 4951733872
+	4951734352 -> 4963590192 [dir=none]
+	4963590192 [label="result
+ (1000)" fillcolor=orange]
+	4951734352 [label="ExpBackward0
+----------------------
+result: [saved tensor]"]
+	4951735456 -> 4951734352
+	4951735456 -> 4952034592 [dir=none]
+	4952034592 [label="other
+ (1000)" fillcolor=orange]
+	4951735456 -> 4952034912 [dir=none]
+	4952034912 [label="self
+ (1000)" fillcolor=orange]
+	4951735456 [label="DivBackward0
+---------------------
+other: [saved tensor]
+self : [saved tensor]"]
+	4951735024 -> 4951735456
+	4951735024 -> 4952033232 [dir=none]
+	4952033232 [label="other
+ (1000)" fillcolor=orange]
+	4951735024 -> 4952033712 [dir=none]
+	4952033712 [label="self
+ (1000)" fillcolor=orange]
+	4951735024 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self : [saved tensor]"]
+	4951735312 -> 4951735024
+	4951735312 -> 4952033872 [dir=none]
+	4952033872 [label="self
+ (1000)" fillcolor=orange]
+	4951735312 [label="PowBackward0
+------------------------
+exponent:              2
+self    : [saved tensor]"]
+	4951732816 -> 4951735312
+	4951735552 -> 4951735024
+	4951735552 -> 4952034992 [dir=none]
+	4952034992 [label="self
+ (1000)" fillcolor=orange]
+	4951735552 [label="PowBackward0
+------------------------
+exponent:              2
+self    : [saved tensor]"]
+	4944805792 -> 4951735552
+	4951735216 -> 4951735456
+	4951735216 [label="AddBackward0
+------------
+alpha: 1"]
+	4951732816 -> 4951735216
+	4951733152 -> 4951735216
+	4951732528 -> 4951734400
+	4951732528 -> 4952036432 [dir=none]
+	4952036432 [label="self
+ (1000)" fillcolor=orange]
+	4951732528 [label="ErfBackward0
+--------------------
+self: [saved tensor]"]
+	4951735648 -> 4951732528
+	4951735648 -> 4963591712 [dir=none]
+	4963591712 [label="result
+ (1000)" fillcolor=orange]
+	4951735648 [label="SqrtBackward0
+----------------------
+result: [saved tensor]"]
+	4951735456 -> 4951735648
+	4951731520 -> 4951731136
+	4951731520 -> 4952038032 [dir=none]
+	4952038032 [label="other
+ (1000)" fillcolor=orange]
+	4951731520 -> 4952037232 [dir=none]
+	4952037232 [label="self
+ (1000)" fillcolor=orange]
+	4951731520 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self : [saved tensor]"]
+	4951732048 -> 4951731520
+	4951732048 -> 4963592272 [dir=none]
+	4963592272 [label="other
+ ()" fillcolor=orange]
+	4951732048 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self :           None"]
+	4951735168 -> 4951732048
+	4951735168 -> 4952037072 [dir=none]
+	4952037072 [label="other
+ (1000)" fillcolor=orange]
+	4951735168 -> 4952037152 [dir=none]
+	4952037152 [label="self
+ (1000)" fillcolor=orange]
+	4951735168 [label="DivBackward0
+---------------------
+other: [saved tensor]
+self : [saved tensor]"]
+	4951735792 -> 4951735168
+	4951735792 [label="SubBackward0
+------------
+alpha: 1"]
+	4951735744 -> 4951735792
+	4951735744 [label="SubBackward0
+------------
+alpha: 1"]
+	4951732816 -> 4951735744
+	4951733152 -> 4951735744
+	4951735600 -> 4951735792
+	4951735600 -> 4952036992 [dir=none]
+	4952036992 [label="other
+ (1000)" fillcolor=orange]
+	4951735600 -> 4952036912 [dir=none]
+	4952036912 [label="self
+ (1000)" fillcolor=orange]
+	4951735600 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self : [saved tensor]"]
+	4951735696 -> 4951735600
+	4951735696 -> 4952034112 [dir=none]
+	4952034112 [label="other
+ (1000)" fillcolor=orange]
+	4951735696 -> 4952036832 [dir=none]
+	4952036832 [label="self
+ (1000)" fillcolor=orange]
+	4951735696 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self : [saved tensor]"]
+	4951735408 -> 4951735696
+	4951735408 -> 4963593552 [dir=none]
+	4963593552 [label="other
+ ()" fillcolor=orange]
+	4951735408 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self :           None"]
+	4951732816 -> 4951735408
+	4951733152 -> 4951735696
+	4951735360 -> 4951735600
+	4951735360 -> 4952034992 [dir=none]
+	4952034992 [label="self
+ (1000)" fillcolor=orange]
+	4951735360 [label="PowBackward0
+------------------------
+exponent:              2
+self    : [saved tensor]"]
+	4944805792 -> 4951735360
+	4951735888 -> 4951735168
+	4951735888 -> 4952034112 [dir=none]
+	4952034112 [label="other
+ (1000)" fillcolor=orange]
+	4951735888 -> 4952033872 [dir=none]
+	4952033872 [label="self
+ (1000)" fillcolor=orange]
+	4951735888 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self : [saved tensor]"]
+	4951732816 -> 4951735888
+	4951733152 -> 4951735888
+	4962334032 -> 4951731520
+	4962334032 [label=OwensTBackward]
+	4951736080 -> 4962334032
+	4951736080 -> 4952037552 [dir=none]
+	4952037552 [label="other
+ (1000)" fillcolor=orange]
+	4951736080 -> 4952034992 [dir=none]
+	4952034992 [label="self
+ (1000)" fillcolor=orange]
+	4951736080 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self : [saved tensor]"]
+	4944805792 -> 4951736080
+	4951736032 -> 4951736080
+	4951736032 -> 4963595152 [dir=none]
+	4963595152 [label="result
+ (1000)" fillcolor=orange]
+	4951736032 [label="SqrtBackward0
+----------------------
+result: [saved tensor]"]
+	4951736224 -> 4951736032
+	4951736224 -> 4952037392 [dir=none]
+	4952037392 [label="other
+ (1000)" fillcolor=orange]
+	4951736224 -> 4952037312 [dir=none]
+	4952037312 [label="self
+ (1000)" fillcolor=orange]
+	4951736224 [label="DivBackward0
+---------------------
+other: [saved tensor]
+self : [saved tensor]"]
+	4951736176 -> 4951736224
+	4951736176 -> 4952034112 [dir=none]
+	4952034112 [label="other
+ (1000)" fillcolor=orange]
+	4951736176 -> 4952036752 [dir=none]
+	4952036752 [label="self
+ (1000)" fillcolor=orange]
+	4951736176 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self : [saved tensor]"]
+	4951736272 -> 4951736176
+	4951736272 -> 4963595792 [dir=none]
+	4963595792 [label="other
+ ()" fillcolor=orange]
+	4951736272 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self :           None"]
+	4951732816 -> 4951736272
+	4951733152 -> 4951736176
+	4951735984 -> 4951736224
+	4951735984 [label="AddBackward0
+------------
+alpha: 1"]
+	4951732816 -> 4951735984
+	4951733152 -> 4951735984
+	4951731904 -> 4962334032
+	4951731904 -> 4963596512 [dir=none]
+	4963596512 [label="result
+ (1000)" fillcolor=orange]
+	4951731904 [label="SqrtBackward0
+----------------------
+result: [saved tensor]"]
+	4951735936 -> 4951731904
+	4951735936 -> 4952034112 [dir=none]
+	4952034112 [label="other
+ (1000)" fillcolor=orange]
+	4951735936 -> 4952033872 [dir=none]
+	4952033872 [label="self
+ (1000)" fillcolor=orange]
+	4951735936 [label="DivBackward0
+---------------------
+other: [saved tensor]
+self : [saved tensor]"]
+	4951732816 -> 4951735936
+	4951733152 -> 4951735936
+	4952037472 -> 4962334032 [dir=none]
+	4952037472 [label="
+ (1000)" fillcolor=orange]
+	4952037712 -> 4962334032 [dir=none]
+	4952037712 [label="
+ (1000)" fillcolor=orange]
+	4951730944 -> 4951730416
+	4951730944 -> 4952036592 [dir=none]
+	4952036592 [label="other
+ ()" fillcolor=orange]
+	4951730944 -> 4952037872 [dir=none]
+	4952037872 [label="self
+ ()" fillcolor=orange]
+	4951730944 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self : [saved tensor]"]
+	4951732576 -> 4951730944
+	4951732576 -> 4963597552 [dir=none]
+	4963597552 [label="other
+ ()" fillcolor=orange]
+	4951732576 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self :           None"]
+	4951735840 -> 4951732576
+	4951735840 -> 4952031712 [dir=none]
+	4952031712 [label="other
+ ()" fillcolor=orange]
+	4951735840 -> 4951167120 [dir=none]
+	4951167120 [label="self
+ ()" fillcolor=orange]
+	4951735840 [label="DivBackward0
+---------------------
+other: [saved tensor]
+self : [saved tensor]"]
+	4951725040 -> 4951735840
+	4951723504 -> 4951735840
+	4951731184 -> 4951730944
+	4951731184 -> 4963598192 [dir=none]
+	4963598192 [label="result
+ ()" fillcolor=orange]
+	4951731184 [label="ExpBackward0
+----------------------
+result: [saved tensor]"]
+	4951732864 -> 4951731184
+	4951732864 -> 4963614880 [dir=none]
+	4963614880 [label="other
+ ()" fillcolor=orange]
+	4951732864 [label="MulBackward0
+---------------------
+other: [saved tensor]
+self :           None"]
+	4963631264 -> 4951732864
+	4963631264 -> 4963615120 [dir=none]
+	4963615120 [label="result
+ ()" fillcolor=orange]
+	4963631264 [label="ReciprocalBackward0
+----------------------
+result: [saved tensor]"]
+	4951723504 -> 4963631264
+	4951728256 -> 4951729888
+	4951728256 [label="SliceBackward0
+----------------------
+dim           :      0
+end           :   None
+self_sym_sizes: (999,)
+start         :      1
+step          :      1"]
+	4951729696 -> 4951728256
+	4951724416 -> 4952032352
+}

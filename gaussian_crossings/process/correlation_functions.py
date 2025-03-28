@@ -22,6 +22,18 @@ def r_damped_harmonic_oscillator_noise(t, sigma, omega0, zeta, **kwargs):
     Returns:
         Tensor: The autocorrelation computed at times t.
     """
+
+    dtype = kwargs.get("dtype", torch.float64)
+    device = kwargs.get("device", None)
+
+    def to_tensor(x):
+        return x if isinstance(x, torch.Tensor) else torch.tensor(x, dtype=dtype, device=device)
+
+    t = to_tensor(t)
+    sigma = to_tensor(sigma)
+    omega0 = to_tensor(omega0)
+    zeta = to_tensor(zeta)
+
     t_abs = torch.abs(t)
     prefactor = sigma**2 / (2 * omega0**3)
     decay = torch.exp(-zeta * omega0 * t_abs)

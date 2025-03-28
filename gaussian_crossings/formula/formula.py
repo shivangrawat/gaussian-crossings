@@ -2,6 +2,7 @@ import torch
 from torch.func import grad
 import numpy as np
 import scipy.special
+from gaussian_crossings.utils.owensT import owensT
 
 torch.set_default_dtype(torch.float64)
 
@@ -31,6 +32,9 @@ class GaussianUpCrossings:
         self.u = u 
         self.args = args
         self.kwargs = kwargs
+
+        # define a small constant to avoid gradient explosion
+        self.eps = 1e-15
 
         # Evaluate r, its first derivative (p), and the second derivative (q) at t = 0.
         self.r0 = self.r(torch.tensor(0.0, dtype=torch.float64))
@@ -307,7 +311,7 @@ class GaussianUpCrossings:
             * (
                 (torch.exp(-alpha * gamma**2) / (2 * torch.sqrt(alpha * beta)))
                 * (
-                    1 + np.sqrt(torch.pi) * gamma * torch.sqrt(alpha + beta) * torch.exp(expr1) * torch.special.erf(torch.sqrt(expr1))
+                    1 + np.sqrt(torch.pi) * gamma * torch.sqrt(alpha + beta) * torch.exp(expr1) * torch.special.erf(torch.sqrt(expr1 + self.eps))
                 )
                 + torch.pi * ((alpha - beta - 2 * alpha * beta * gamma**2) / (alpha * beta))
                 * scipy.special.owens_t(gamma * torch.sqrt(2 * alpha * beta / (alpha + beta)), torch.sqrt(alpha / beta))
@@ -364,7 +368,7 @@ class GaussianUpCrossings:
             * (
                 (2 * torch.exp(-alpha * gamma**2) / torch.sqrt(alpha * beta))
                 * (
-                    1 + np.sqrt(torch.pi) * gamma * torch.sqrt(alpha + beta) * torch.exp(expr1) * torch.special.erf(torch.sqrt(expr1))
+                    1 + np.sqrt(torch.pi) * gamma * torch.sqrt(alpha + beta) * torch.exp(expr1) * torch.special.erf(torch.sqrt(expr1 + self.eps))
                 )
                 + 4 * torch.pi * ((alpha - beta - 2 * alpha * beta * gamma**2) / (alpha * beta))
                 * (scipy.special.owens_t(gamma * torch.sqrt(2 * alpha * beta / (alpha + beta)), torch.sqrt(alpha / beta)) - 1 / 8)
@@ -401,7 +405,7 @@ class GaussianUpCrossings:
 
         return T * (self.upcrossing_mean_rate(u=u) + 2 * integral)
 
-    def upcrossing_variance_CLT_per_unit_time(self, u=None, epsilon_left=1e-4, epsilon_right=1e-5, num_points=1000):
+    def upcrossing_variance_CLT_per_unit_time(self, u=None, epsilon_left=1e-5, epsilon_right=1e-5, num_points=1000):
         """
         Compute the variance per unit time of the upcrossings counting process based on the CLT formula.
 
@@ -428,7 +432,7 @@ class GaussianUpCrossings:
 
         return self.upcrossing_mean_rate(u=u) + 2 * integral
     
-    def upcrossing_variance_CLT(self, T, u=None, epsilon_left=1e-4, epsilon_right=1e-5, num_points=1000):
+    def upcrossing_variance_CLT(self, T, u=None, epsilon_left=1e-5, epsilon_right=1e-5, num_points=1000):
         """
         Compute the variance of the upcrossings counting process over time T based on the CLT formula.
 
@@ -465,7 +469,7 @@ class GaussianUpCrossings:
         """
         return self.upcrossing_variance(T, u=u, epsilon_left=epsilon_left, num_points=num_points)
     
-    def downcrossing_variance_CLT_per_unit_time(self, u=None, epsilon_left=1e-4, epsilon_right=1e-5, num_points=1000):
+    def downcrossing_variance_CLT_per_unit_time(self, u=None, epsilon_left=1e-5, epsilon_right=1e-5, num_points=1000):
         """
         Compute the variance per unit time of the downcrossings counting process based on the CLT formula.
 
@@ -483,7 +487,7 @@ class GaussianUpCrossings:
         """
         return self.upcrossing_variance_CLT_per_unit_time(u=u, epsilon_left=epsilon_left, epsilon_right=epsilon_right, num_points=num_points)
     
-    def downcrossing_variance_CLT(self, T, u=None, epsilon_left=1e-4, epsilon_right=1e-5, num_points=1000):
+    def downcrossing_variance_CLT(self, T, u=None, epsilon_left=1e-5, epsilon_right=1e-5, num_points=1000):
         """
         Compute the variance of the downcrossings counting process over time T based on the CLT formula.
 
@@ -529,7 +533,7 @@ class GaussianUpCrossings:
 
         return T * (self.crossing_mean_rate(u=u) + 2 * integral)
     
-    def crossing_variance_CLT_per_unit_time(self, u=None, epsilon_left=1e-4, epsilon_right=1e-5, num_points=1000):
+    def crossing_variance_CLT_per_unit_time(self, u=None, epsilon_left=1e-5, epsilon_right=1e-5, num_points=1000):
         """
         Compute the variance per unit time of the crossings counting process based on the CLT formula.
 
@@ -556,7 +560,7 @@ class GaussianUpCrossings:
 
         return self.crossing_mean_rate(u=u) + 2 * integral
     
-    def crossing_variance_CLT(self, T, u=None, epsilon_left=1e-4, epsilon_right=1e-5, num_points=1000):
+    def crossing_variance_CLT(self, T, u=None, epsilon_left=1e-5, epsilon_right=1e-5, num_points=1000):
         """
         Compute the variance of the crossings counting process over time T based on the CLT formula.
 

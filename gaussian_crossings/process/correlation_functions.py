@@ -5,6 +5,45 @@ import scipy.special
 from scipy.special import kv, gamma
 
 
+def r_damped_harmonic_oscillator_noise(t, sigma, omega0, zeta, **kwargs):
+    """
+    Autocorrelation function of a damped harmonic oscillator with additive noise.
+
+    Parameters:
+        t : tensor or array
+            Time differences.
+        sigma : float
+            Standard deviation (amplitude) of the noise.
+        omega0 : float
+            Natural frequency of the oscillator.
+        zeta : float
+            Damping ratio of the oscillator.
+
+    Returns:
+        Tensor: The autocorrelation computed at times t.
+    """
+    t_abs = torch.abs(t)
+    prefactor = sigma**2 / (2 * omega0**3)
+    decay = torch.exp(-zeta * omega0 * t_abs)
+
+    discriminant = zeta**2 - 1.0
+
+    # Under-damped case (zeta < 1)
+    if discriminant < 0:
+        omega_d = omega0 * torch.sqrt(1.0 - zeta**2)
+        oscillatory_part = (torch.sin(omega_d * t_abs) / torch.sqrt(1.0 - zeta**2) +
+                            torch.cos(omega_d * t_abs) / zeta)
+    # Critically-damped case (zeta == 1)
+    elif discriminant == 0:
+        oscillatory_part = (t_abs * omega0 + 1.0)
+    # Over-damped case (zeta > 1)
+    else:
+        sqrt_disc = torch.sqrt(discriminant)
+        oscillatory_part = (torch.sinh(sqrt_disc * omega0 * t_abs) / sqrt_disc +
+                            torch.cosh(sqrt_disc * omega0 * t_abs) / zeta)
+
+    return prefactor * decay * oscillatory_part
+
 def r_filtered_OU(t, sigma, tau, kappa, **kwargs):
     """
     Filtered Ornstein-Uhlenbeck autocovariance function.

@@ -61,11 +61,11 @@ class OU_noise:
         return torch.tensor([0., 0.])
     
 class damped_harmonic_oscillator_noise:
-    def __init__(self, zeta=0.5, omega0=1.0, sigma=1.0):
-        # Parameters: damping ratio (zeta), natural frequency (omega0), noise strength (sigma)
+    def __init__(self, zeta=0.5, omega0=1.0, temp=1.0):
+        # Parameters: damping ratio (zeta), natural frequency (omega0), Temperature (temp, noise strength)
         self.zeta = zeta
         self.omega0 = omega0
-        self.sigma = sigma
+        self.temp = temp
         self.dim = 2
 
         # Jacobian of the linearized system
@@ -74,7 +74,7 @@ class damped_harmonic_oscillator_noise:
 
     def noise_vector(self):
         # Noise vector acts on velocity only
-        return torch.tensor([0., math.sqrt(2) * self.sigma])
+        return torch.tensor([0., math.sqrt(4 * self.zeta * self.omega0 * self.temp)])
 
     @dynm_fun
     def _dynamical_fun(self, t, vars):

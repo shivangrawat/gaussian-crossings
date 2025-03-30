@@ -5,15 +5,15 @@ import scipy.special
 from scipy.special import kv, gamma
 
 
-def r_damped_harmonic_oscillator_noise(t, sigma, omega0, zeta, **kwargs):
+def r_damped_harmonic_oscillator_noise(t, temp, omega0, zeta, **kwargs):
     """
     Autocorrelation function of a damped harmonic oscillator with additive noise.
 
     Parameters:
         t : tensor or array
             Time differences.
-        sigma : float
-            Standard deviation (amplitude) of the noise.
+        temp : float
+            Tempreture of the system. (controls the strength of the noise)
         omega0 : float
             Natural frequency of the oscillator.
         zeta : float
@@ -30,31 +30,39 @@ def r_damped_harmonic_oscillator_noise(t, sigma, omega0, zeta, **kwargs):
         return x if isinstance(x, torch.Tensor) else torch.tensor(x, dtype=dtype, device=device)
 
     t = to_tensor(t)
-    sigma = to_tensor(sigma)
+    temp = to_tensor(temp)
     omega0 = to_tensor(omega0)
     zeta = to_tensor(zeta)
 
     t_abs = torch.abs(t)
-    prefactor = sigma**2 / (2 * omega0**3)
+    prefactor = temp * zeta / omega0**2
     decay = torch.exp(-zeta * omega0 * t_abs)
 
     discriminant = zeta**2 - 1.0
 
     # Under-damped case (zeta < 1)
     if discriminant < 0:
+        decay = torch.exp(-zeta * omega0 * t_abs)
         omega_d = omega0 * torch.sqrt(1.0 - zeta**2)
         oscillatory_part = (torch.sin(omega_d * t_abs) / torch.sqrt(1.0 - zeta**2) +
                             torch.cos(omega_d * t_abs) / zeta)
+        result = prefactor * decay * oscillatory_part
+
     # Critically-damped case (zeta == 1)
     elif discriminant == 0:
+        decay = torch.exp(-zeta * omega0 * t_abs)
         oscillatory_part = (t_abs * omega0 + 1.0)
+        result = prefactor * decay * oscillatory_part
+
     # Over-damped case (zeta > 1)
     else:
         sqrt_disc = torch.sqrt(discriminant)
-        oscillatory_part = (torch.sinh(sqrt_disc * omega0 * t_abs) / sqrt_disc +
-                            torch.cosh(sqrt_disc * omega0 * t_abs) / zeta)
+        term1 = (1/sqrt_disc + 1/zeta) * torch.exp(-omega0 * (zeta - sqrt_disc) * t_abs)
+        term2 = (1/zeta - 1/sqrt_disc) * torch.exp(-omega0 * (zeta + sqrt_disc) * t_abs)
+        exp_part = 0.5 * (term1 + term2)
+        result = prefactor * exp_part
 
-    return prefactor * decay * oscillatory_part
+    return result
 
 def r_filtered_OU(t, sigma, tau, kappa, **kwargs):
     """

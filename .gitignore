@@ -141,6 +141,7 @@ venv.bak/
 # add all png and svg files
 *.png
 *.svg
+*.eps
 
 # Spyder project settings
 .spyderproject

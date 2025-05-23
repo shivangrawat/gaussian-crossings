@@ -154,7 +154,7 @@ def r_squared_exp(t, sigma, tau, **kwargs):
     Returns:
         Tensor: The autocovariance computed at times t.
     """
-    return sigma ** 2 * (torch.exp(- (t / (2 * tau)) ** 2))
+    return sigma ** 2 * (torch.exp(- (1 / 2) * (t / tau) ** 2))
 
 def r_matern(t, sigma, tau, nu, **kwargs):
     """

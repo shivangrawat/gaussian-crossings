@@ -1,6 +1,7 @@
 import torch
 from torch.func import grad, hessian
 import numpy as np
+import math
 import scipy.special
 from gaussian_crossings.utils.owensT import owensT
 
@@ -254,6 +255,7 @@ class GaussianUpCrossingsDimless_minimal:
         alpha, beta, gamma, delta = self.compute_all_quantities(t, u)
 
         expr1 = alpha**2 * gamma**2 / (alpha + beta)
+        erf_arg = alpha * gamma / torch.sqrt(alpha + beta)
 
         final_integral = (
             torch.exp(-delta * u**2)
@@ -261,7 +263,7 @@ class GaussianUpCrossingsDimless_minimal:
             * (
                 (torch.exp(-alpha * gamma**2) / (2 * torch.sqrt(alpha * beta)))
                 * (
-                    1 + torch.sqrt(torch.tensor(torch.pi)) * gamma * torch.sqrt(alpha + beta) * torch.exp(expr1) * torch.special.erf(torch.sqrt(expr1 + self.eps))
+                    1 + math.sqrt(math.pi) * gamma * torch.sqrt(alpha + beta) * torch.exp(expr1) * torch.special.erf(erf_arg)
                 )
                 + torch.pi * ((alpha - beta - 2 * alpha * beta * gamma**2) / (alpha * beta))
                 * owensT(gamma * torch.sqrt(2 * alpha * beta / (alpha + beta)), torch.sqrt(alpha / beta))

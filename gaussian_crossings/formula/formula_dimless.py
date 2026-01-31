@@ -1,6 +1,7 @@
 import torch
 from torch.func import grad, hessian
 import numpy as np
+import math
 import scipy.special
 from gaussian_crossings.utils.owensT import owensT
 
@@ -312,6 +313,7 @@ class GaussianUpCrossingsDimless:
         alpha, beta, gamma, delta = self.compute_all_quantities(t, u)
 
         expr1 = alpha**2 * gamma**2 / (alpha + beta)
+        erf_arg = alpha * gamma / torch.sqrt(alpha + beta)
 
         final_integral = (
             torch.exp(-delta * u**2)
@@ -319,7 +321,7 @@ class GaussianUpCrossingsDimless:
             * (
                 (torch.exp(-alpha * gamma**2) / (2 * torch.sqrt(alpha * beta)))
                 * (
-                    1 + np.sqrt(torch.pi) * gamma * torch.sqrt(alpha + beta) * torch.exp(expr1) * torch.special.erf(torch.sqrt(expr1 + self.eps))
+                    1 + math.sqrt(math.pi) * gamma * torch.sqrt(alpha + beta) * torch.exp(expr1) * torch.special.erf(erf_arg)
                 )
                 + torch.pi * ((alpha - beta - 2 * alpha * beta * gamma**2) / (alpha * beta))
                 * owensT(gamma * torch.sqrt(2 * alpha * beta / (alpha + beta)), torch.sqrt(alpha / beta))
@@ -327,7 +329,7 @@ class GaussianUpCrossingsDimless:
         ) - (1 / (4 * torch.pi**2)) * (q0 / r0) * torch.exp(-(u**2) / r0)
 
         return final_integral
-    
+
     def downcrossing_integrand(self, t, u=None):
         """
         Compute the integrand for the variance of the downcrossings counting process.
@@ -342,8 +344,8 @@ class GaussianUpCrossingsDimless:
         Returns:
             torch.Tensor: The value of the integrand for the downcrossings variance.
         """
-        return self.I_upcrossing(t, u=u)
-    
+        return self.upcrossing_integrand(t, u=u)
+
     def crossing_integrand(self, t, u=None):
         """
         Compute the integrand for the variance of the crossings counting process.
@@ -361,7 +363,7 @@ class GaussianUpCrossingsDimless:
         """
         if u is None:
             u = self.u
-        
+
         r = self.r(t)
         r0 = self.r0
         q0 = self.q0
@@ -369,6 +371,7 @@ class GaussianUpCrossingsDimless:
         alpha, beta, gamma, delta = self.compute_all_quantities(t, u)
 
         expr1 = alpha**2 * gamma**2 / (alpha + beta)
+        erf_arg = alpha * gamma / torch.sqrt(alpha + beta)
 
         final_integral = (
             torch.exp(-delta * u**2)
@@ -376,7 +379,7 @@ class GaussianUpCrossingsDimless:
             * (
                 (2 * torch.exp(-alpha * gamma**2) / torch.sqrt(alpha * beta))
                 * (
-                    1 + np.sqrt(torch.pi) * gamma * torch.sqrt(alpha + beta) * torch.exp(expr1) * torch.special.erf(torch.sqrt(expr1 + self.eps))
+                    1 + math.sqrt(math.pi) * gamma * torch.sqrt(alpha + beta) * torch.exp(expr1) * torch.special.erf(erf_arg)
                 )
                 + 4 * torch.pi * ((alpha - beta - 2 * alpha * beta * gamma**2) / (alpha * beta))
                 * (owensT(gamma * torch.sqrt(2 * alpha * beta / (alpha + beta)), torch.sqrt(alpha / beta)) - 1 / 8)

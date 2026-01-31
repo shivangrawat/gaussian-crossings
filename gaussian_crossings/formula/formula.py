@@ -1,3 +1,12 @@
+"""Formula implementation for Gaussian process level crossing statistics.
+
+This module provides the GaussianUpCrossings class which computes exact
+mean, variance, and Fano factor for level crossings of stationary Gaussian
+processes using the Kac-Rice formulas.
+"""
+
+from typing import Any, Callable, Optional, Tuple, Union
+
 import torch
 from torch.func import grad
 import numpy as np
@@ -9,25 +18,41 @@ torch.set_default_dtype(torch.float64)
 
 
 class GaussianUpCrossings:
-    def __init__(self, r_func, u=0, *args, **kwargs):
-        """
-        Initialize the GaussianUpCrossings instance.
+    """Compute level crossing statistics for stationary Gaussian processes.
 
-        This class computes various quantities related to upcrossings, downcrossings,
-        and crossings of a Gaussian process defined via its correlation function.
+    This class computes various quantities related to upcrossings, downcrossings,
+    and crossings of a Gaussian process defined via its correlation function,
+    including mean rates, variances, and Fano factors.
 
-        Parameters:
-            r_func (callable): A function that accepts a time tensor `t` (and optionally additional
-                parameters) and returns the correlation function r(t) as a torch.Tensor.
-            u (float, optional): The threshold level for upcrossings. Default is 0.
-            *args: Additional positional arguments to be passed to `r_func`.
-            **kwargs: Additional keyword arguments to be passed to `r_func`.
+    Attributes:
+        r_func: Correlation function of the process.
+        u: Threshold level for crossings.
+        r0: Correlation function value at t=0 (variance).
+        p0: First derivative of correlation at t=0 (always 0 for stationary).
+        q0: Negative second derivative of correlation at t=0.
+    """
 
-        Notes:
-            Upon initialization, the class evaluates:
-                - r0: the value of r(t) at t = 0,
-                - p0: the first derivative of r(t) at t = 0,
-                - q0: the negative second derivative of r(t) at t = 0.
+    def __init__(
+        self,
+        r_func: Callable[..., torch.Tensor],
+        u: float = 0,
+        *args: Any,
+        **kwargs: Any
+    ) -> None:
+        """Initialize the GaussianUpCrossings instance.
+
+        Args:
+            r_func: A function that accepts a time tensor t (and optionally
+                additional parameters) and returns the correlation function
+                r(t) as a torch.Tensor.
+            u: The threshold level for crossings. Default is 0.
+            *args: Additional positional arguments to be passed to r_func.
+            **kwargs: Additional keyword arguments to be passed to r_func.
+
+        Note:
+            Upon initialization, the class evaluates r0 (correlation at t=0),
+            p0 (first derivative at t=0), and q0 (negative second derivative
+            at t=0).
         """
         self.r_func = r_func
         self.u = u 
@@ -42,133 +67,128 @@ class GaussianUpCrossings:
         self.p0 = torch.tensor(0.0, dtype=torch.float64)
         self.q0 = self.q(torch.tensor(1e-40, dtype=torch.float64)) # to avoid issues with autograd at t=0
 
-    def r(self, t):
-        """
-        Evaluate the correlation function r at the given time(s).
+    def r(self, t: torch.Tensor) -> torch.Tensor:
+        """Evaluate the correlation function r at the given time(s).
 
-        Parameters:
-            t (torch.Tensor): A tensor representing time(s) at which to evaluate r.
+        Args:
+            t: A tensor representing time(s) at which to evaluate r.
 
         Returns:
-            torch.Tensor: The correlation function evaluated at t.
+            The correlation function evaluated at t.
         """
         return self.r_func(t, *self.args, **self.kwargs)
 
-    def p(self, t):
-        """
-        Evaluate the first derivative of the correlation function r(t) at the given time(s).
+    def p(self, t: torch.Tensor) -> torch.Tensor:
+        """Evaluate the first derivative of the correlation function r(t).
 
-        Parameters:
-            t (torch.Tensor): A tensor representing time(s) at which to compute the derivative.
+        Args:
+            t: A tensor representing time(s) at which to compute the derivative.
 
         Returns:
-            torch.Tensor: The first derivative of r(t) evaluated at t.
+            The first derivative of r(t) evaluated at t.
         """
-        def sum_func(t):
+        def sum_func(t: torch.Tensor) -> torch.Tensor:
             return torch.sum(self.r(t))
         return grad(sum_func)(t)
 
-    def q(self, t):
-        """
-        Evaluate the negative derivative of p(t) with respect to t.
+    def q(self, t: torch.Tensor) -> torch.Tensor:
+        """Evaluate the negative second derivative of r(t).
 
-        This effectively computes the (negative) second derivative of r(t).
+        This effectively computes q(t) = -r''(t).
 
-        Parameters:
-            t (torch.Tensor): A tensor representing time(s) at which to compute the derivative.
+        Args:
+            t: A tensor representing time(s) at which to compute the derivative.
 
         Returns:
-            torch.Tensor: The negative derivative of p(t) evaluated at t.
+            The negative second derivative of r(t) evaluated at t.
         """
-        def sum_func(t):
+        def sum_func(t: torch.Tensor) -> torch.Tensor:
             return torch.sum(self.p(t))
         return - grad(sum_func)(t)
 
-    def _alpha(self, t):
-        """
-        Compute the auxiliary quantity alpha(t).
+    def _alpha(self, t: torch.Tensor) -> torch.Tensor:
+        """Compute the auxiliary quantity alpha(t).
 
-        The formula is given by:
-            alpha(t) = - (r(t) + r0) / (2*(p(t)**2 + (q(t) - q0)*(r(t) + r0)))
-        where r0 and q0 are the correlation function and its second derivative evaluated at t = 0.
+        The formula is:
+            alpha(t) = -(r(t) + r0) / (2*(p(t)^2 + (q(t) - q0)*(r(t) + r0)))
 
-        Parameters:
-            t (torch.Tensor): A tensor representing time(s).
+        Args:
+            t: A tensor representing time(s).
 
         Returns:
-            torch.Tensor: The absolute value of alpha(t).
+            The absolute value of alpha(t).
         """
         return torch.abs(
             -(self.r(t) + self.r0)
             / (2 * (self.p(t) ** 2 + (self.q(t) - self.q0) * (self.r(t) + self.r0)))
         )
 
-    def _beta(self, t):
-        """
-        Compute the auxiliary quantity beta(t).
+    def _beta(self, t: torch.Tensor) -> torch.Tensor:
+        """Compute the auxiliary quantity beta(t).
 
-        The formula is given by:
-            beta(t) = - (r0 - r(t)) / (2*(p(t)**2 + (q(t) + q0)*(r(t) - r0)))
-        where r0 and q0 are the correlation function and its second derivative evaluated at t = 0.
+        The formula is:
+            beta(t) = -(r0 - r(t)) / (2*(p(t)^2 + (q(t) + q0)*(r(t) - r0)))
 
-        Parameters:
-            t (torch.Tensor): A tensor representing time(s).
+        Args:
+            t: A tensor representing time(s).
 
         Returns:
-            torch.Tensor: The absolute value of beta(t).
+            The absolute value of beta(t).
         """
         return torch.abs(
             -(self.r0 - self.r(t))
             / (2 * (self.p(t) ** 2 + (self.q(t) + self.q0) * (self.r(t) - self.r0)))
         )
 
-    def _gamma(self, t, u=None):
-        """
-        Compute the auxiliary quantity gamma(t).
+    def _gamma(
+        self,
+        t: torch.Tensor,
+        u: Optional[Union[float, torch.Tensor]] = None
+    ) -> torch.Tensor:
+        """Compute the auxiliary quantity gamma(t).
 
-        The formula is given by:
-            gamma(t) = (sqrt(2) * p(t) / (r(t) + r0)) * u,
-        where u is a given constant (or tensor) and r0 is the value of the correlation function at t = 0.
+        The formula is:
+            gamma(t) = (sqrt(2) * p(t) / (r(t) + r0)) * u
 
-        Parameters:
-            t (torch.Tensor): A tensor representing time(s).
-            u (float or torch.Tensor, optional): The threshold level. If not provided, the instance's u is used.
+        Args:
+            t: A tensor representing time(s).
+            u: The threshold level. If not provided, uses the instance's u.
 
         Returns:
-            torch.Tensor: The value of gamma(t).
+            The value of gamma(t).
         """
         if u is None:
             u = self.u
-        # Create sqrt(2) as a double-precision tensor.
         sqrt2 = torch.sqrt(torch.tensor(2.0, dtype=torch.float64))
         return (sqrt2 * self.p(t) / (self.r(t) + self.r0)) * u
 
-    def _delta(self, t):
-        """
-        Compute the auxiliary quantity delta(t).
+    def _delta(self, t: torch.Tensor) -> torch.Tensor:
+        """Compute the auxiliary quantity delta(t).
 
-        The formula is given by:
+        The formula is:
             delta(t) = 1 / (r(t) + r0)
-        where r0 is the value of the correlation function at t = 0.
 
-        Parameters:
-            t (torch.Tensor): A tensor representing time(s).
+        Args:
+            t: A tensor representing time(s).
 
         Returns:
-            torch.Tensor: The value of delta(t).
+            The value of delta(t).
         """
         return 1.0 / (self.r(t) + self.r0)
 
-    def compute_all_quantities(self, t, u=None):
-        """
-        Compute the set of auxiliary quantities alpha, beta, gamma, and delta at time t.
+    def compute_all_quantities(
+        self,
+        t: torch.Tensor,
+        u: Optional[Union[float, torch.Tensor]] = None
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Compute auxiliary quantities alpha, beta, gamma, and delta at time t.
 
-        Parameters:
-            t (torch.Tensor): A tensor representing time(s).
-            u (float or torch.Tensor, optional): The threshold level for gamma. If not provided, the instance's u is used.
+        Args:
+            t: A tensor representing time(s).
+            u: The threshold level for gamma. If not provided, uses instance's u.
 
         Returns:
-            tuple: A tuple containing (alpha, beta, gamma, delta) evaluated at t.
+            A tuple (alpha, beta, gamma, delta) evaluated at t.
         """
         if u is None:
             u = self.u
@@ -190,110 +210,121 @@ class GaussianUpCrossings:
 
         return alpha, beta, gamma, delta
 
-    def upcrossing_mean_rate(self, u=None):
-        """
-        Compute the mean rate (per unit time) of the upcrossings counting process.
+    def upcrossing_mean_rate(
+        self,
+        u: Optional[Union[float, torch.Tensor]] = None
+    ) -> torch.Tensor:
+        """Compute the mean rate of upcrossings per unit time.
 
         The rate is given by:
-            (1 / (2*pi)) * sqrt(q0 / r0) * exp(-u**2 / (2*r0))
+            (1 / (2*pi)) * sqrt(q0 / r0) * exp(-u^2 / (2*r0))
 
-        Parameters:
-            u (float or torch.Tensor, optional): The threshold level for upcrossings.
-                If not provided, the instance's u is used.
+        Args:
+            u: The threshold level. If not provided, uses instance's u.
 
         Returns:
-            torch.Tensor: The mean rate of upcrossings per unit time.
+            The mean rate of upcrossings per unit time.
         """
         if u is None:
             u = self.u
         return (1 / (2 * torch.pi)) * torch.sqrt(self.q0 / self.r0) * torch.exp(-u**2 / (2 * self.r0))
-    
-    def downcrossing_mean_rate(self, u=None):
-        """
-        Compute the mean rate (per unit time) of the downcrossings counting process.
 
-        This is defined to be equal to the upcrossing mean rate.
+    def downcrossing_mean_rate(
+        self,
+        u: Optional[Union[float, torch.Tensor]] = None
+    ) -> torch.Tensor:
+        """Compute the mean rate of downcrossings per unit time.
 
-        Parameters:
-            u (float or torch.Tensor, optional): The threshold level for downcrossings.
-                If not provided, the instance's u is used.
+        For stationary Gaussian processes, this equals the upcrossing rate.
+
+        Args:
+            u: The threshold level. If not provided, uses instance's u.
 
         Returns:
-            torch.Tensor: The mean rate of downcrossings per unit time.
+            The mean rate of downcrossings per unit time.
         """
         return self.upcrossing_mean_rate(u=u)
-    
-    def crossing_mean_rate(self, u=None):
-        """
-        Compute the mean rate (per unit time) of the crossings counting process.
 
-        The crossings mean rate is defined as twice the upcrossing mean rate.
+    def crossing_mean_rate(
+        self,
+        u: Optional[Union[float, torch.Tensor]] = None
+    ) -> torch.Tensor:
+        """Compute the mean rate of crossings per unit time.
 
-        Parameters:
-            u (float or torch.Tensor, optional): The threshold level for crossings.
-                If not provided, the instance's u is used.
+        The crossings rate is twice the upcrossing rate.
+
+        Args:
+            u: The threshold level. If not provided, uses instance's u.
 
         Returns:
-            torch.Tensor: The mean rate of crossings per unit time.
+            The mean rate of crossings per unit time.
         """
         return 2 * self.upcrossing_mean_rate(u=u)
-    
-    def upcrossing_mean(self, T, u=None):
-        """
-        Compute the expected number (mean) of upcrossings over a time interval T.
 
-        Parameters:
-            T (float): The length of the time interval.
-            u (float or torch.Tensor, optional): The threshold level for upcrossings.
-                If not provided, the instance's u is used.
+    def upcrossing_mean(
+        self,
+        T: float,
+        u: Optional[Union[float, torch.Tensor]] = None
+    ) -> torch.Tensor:
+        """Compute the expected number of upcrossings over time interval T.
+
+        Args:
+            T: The length of the time interval.
+            u: The threshold level. If not provided, uses instance's u.
 
         Returns:
-            torch.Tensor: The expected number of upcrossings in time T.
+            The expected number of upcrossings in time T.
         """
         return self.upcrossing_mean_rate(u=u) * T
-    
-    def downcrossing_mean(self, T, u=None):
-        """
-        Compute the expected number (mean) of downcrossings over a time interval T.
 
-        Parameters:
-            T (float): The length of the time interval.
-            u (float or torch.Tensor, optional): The threshold level for downcrossings.
-                If not provided, the instance's u is used.
+    def downcrossing_mean(
+        self,
+        T: float,
+        u: Optional[Union[float, torch.Tensor]] = None
+    ) -> torch.Tensor:
+        """Compute the expected number of downcrossings over time interval T.
+
+        Args:
+            T: The length of the time interval.
+            u: The threshold level. If not provided, uses instance's u.
 
         Returns:
-            torch.Tensor: The expected number of downcrossings in time T.
+            The expected number of downcrossings in time T.
         """
         return self.downcrossing_mean_rate(u=u) * T
-    
-    def crossing_mean(self, T, u=None):
-        """
-        Compute the expected number (mean) of crossings over a time interval T.
 
-        Parameters:
-            T (float): The length of the time interval.
-            u (float or torch.Tensor, optional): The threshold level for crossings.
-                If not provided, the instance's u is used.
+    def crossing_mean(
+        self,
+        T: float,
+        u: Optional[Union[float, torch.Tensor]] = None
+    ) -> torch.Tensor:
+        """Compute the expected number of crossings over time interval T.
+
+        Args:
+            T: The length of the time interval.
+            u: The threshold level. If not provided, uses instance's u.
 
         Returns:
-            torch.Tensor: The expected number of crossings in time T.
+            The expected number of crossings in time T.
         """
         return self.crossing_mean_rate(u=u) * T
 
-    def upcrossing_integrand(self, t, u=None):
-        """
-        Compute the integrand for the variance of the upcrossings counting process.
+    def upcrossing_integrand(
+        self,
+        t: torch.Tensor,
+        u: Optional[Union[float, torch.Tensor]] = None
+    ) -> torch.Tensor:
+        """Compute the integrand for upcrossings variance.
 
-        This function evaluates the integral formula derived for the variance of upcrossings.
-        The formula involves the auxiliary quantities alpha, beta, gamma, and delta.
+        Evaluates the integral formula derived for the variance of upcrossings
+        using the auxiliary quantities alpha, beta, gamma, and delta.
 
-        Parameters:
-            t (torch.Tensor): A tensor representing time(s) at which to evaluate the integrand.
-            u (float or torch.Tensor, optional): The threshold level.
-                If not provided, the instance's u is used.
+        Args:
+            t: A tensor representing time(s) at which to evaluate the integrand.
+            u: The threshold level. If not provided, uses instance's u.
 
         Returns:
-            torch.Tensor: The value of the integrand for the upcrossings variance.
+            The value of the integrand for upcrossings variance.
         """
         if u is None:
             u = self.u
@@ -322,36 +353,40 @@ class GaussianUpCrossings:
 
         return final_integral
     
-    def downcrossing_integrand(self, t, u=None):
-        """
-        Compute the integrand for the variance of the downcrossings counting process.
+    def downcrossing_integrand(
+        self,
+        t: torch.Tensor,
+        u: Optional[Union[float, torch.Tensor]] = None
+    ) -> torch.Tensor:
+        """Compute the integrand for downcrossings variance.
 
-        This method is intended to be the same as the upcrossing integrand.
+        For stationary Gaussian processes, this equals the upcrossing integrand.
 
-        Parameters:
-            t (torch.Tensor): A tensor representing time(s) at which to evaluate the integrand.
-            u (float or torch.Tensor, optional): The threshold level.
-                If not provided, the instance's u is used.
+        Args:
+            t: A tensor representing time(s) at which to evaluate the integrand.
+            u: The threshold level. If not provided, uses instance's u.
 
         Returns:
-            torch.Tensor: The value of the integrand for the downcrossings variance.
+            The value of the integrand for downcrossings variance.
         """
         return self.upcrossing_integrand(t, u=u)
-    
-    def crossing_integrand(self, t, u=None):
-        """
-        Compute the integrand for the variance of the crossings counting process.
 
-        This function evaluates the integral formula derived for the variance of crossings.
-        The formula uses the auxiliary quantities alpha, beta, gamma, and delta.
+    def crossing_integrand(
+        self,
+        t: torch.Tensor,
+        u: Optional[Union[float, torch.Tensor]] = None
+    ) -> torch.Tensor:
+        """Compute the integrand for crossings variance.
 
-        Parameters:
-            t (torch.Tensor): A tensor representing time(s) at which to evaluate the integrand.
-            u (float or torch.Tensor, optional): The threshold level.
-                If not provided, the instance's u is used.
+        Evaluates the integral formula derived for the variance of crossings
+        using the auxiliary quantities alpha, beta, gamma, and delta.
+
+        Args:
+            t: A tensor representing time(s) at which to evaluate the integrand.
+            u: The threshold level. If not provided, uses instance's u.
 
         Returns:
-            torch.Tensor: The value of the integrand for the crossings variance.
+            The value of the integrand for crossings variance.
         """
         if u is None:
             u = self.u
@@ -380,22 +415,26 @@ class GaussianUpCrossings:
 
         return final_integral
 
-    def upcrossing_variance(self, T, u=None, epsilon_left=1e-5, num_points=1000):
-        """
-        Compute the variance of the upcrossings counting process over a time interval T.
+    def upcrossing_variance(
+        self,
+        T: float,
+        u: Optional[Union[float, torch.Tensor]] = None,
+        epsilon_left: float = 1e-5,
+        num_points: int = 1000
+    ) -> torch.Tensor:
+        """Compute the variance of upcrossings over time interval T.
 
-        The computation involves mapping the integration domain into [0, 1] and evaluating
-        the integral using a trapezoidal rule.
+        The computation maps the integration domain into [0, 1] and evaluates
+        the integral using the trapezoidal rule.
 
-        Parameters:
-            T (float): The length of the time interval.
-            u (float or torch.Tensor, optional): The threshold level.
-                If not provided, the instance's u is used.
-            epsilon_left (float, optional): A small value to avoid the singularity at 0.
-            num_points (int, optional): The number of points to use in the numerical integration.
+        Args:
+            T: The length of the time interval.
+            u: The threshold level. If not provided, uses instance's u.
+            epsilon_left: Small value to avoid singularity at 0.
+            num_points: Number of points for numerical integration.
 
         Returns:
-            torch.Tensor: The variance of the upcrossings counting process over time T.
+            The variance of upcrossings over time T.
         """
         if u is None:
             u = self.u
@@ -408,21 +447,25 @@ class GaussianUpCrossings:
 
         return T * (self.upcrossing_mean_rate(u=u) + 2 * integral)
 
-    def upcrossing_variance_CLT_per_unit_time(self, u=None, epsilon_left=1e-5, epsilon_right=1e-5, num_points=1000):
-        """
-        Compute the variance per unit time of the upcrossings counting process based on the CLT formula.
+    def upcrossing_variance_CLT_per_unit_time(
+        self,
+        u: Optional[Union[float, torch.Tensor]] = None,
+        epsilon_left: float = 1e-5,
+        epsilon_right: float = 1e-5,
+        num_points: int = 1000
+    ) -> torch.Tensor:
+        """Compute the variance per unit time of upcrossings (CLT formula).
 
-        The integration is performed by mapping the time domain into [0, 1] and using numerical integration.
+        The integration maps the time domain into [0, 1] using numerical integration.
 
-        Parameters:
-            u (float or torch.Tensor, optional): The threshold level.
-                If not provided, the instance's u is used.
-            epsilon_left (float, optional): A small value to avoid singularity at the left endpoint.
-            epsilon_right (float, optional): A small value to avoid singularity at the right endpoint.
-            num_points (int, optional): The number of points for the numerical integration.
+        Args:
+            u: The threshold level. If not provided, uses instance's u.
+            epsilon_left: Small value to avoid singularity at left endpoint.
+            epsilon_right: Small value to avoid singularity at right endpoint.
+            num_points: Number of points for numerical integration.
 
         Returns:
-            torch.Tensor: The variance per unit time of the upcrossings counting process.
+            The variance per unit time of upcrossings.
         """
         if u is None:
             u = self.u
@@ -435,95 +478,117 @@ class GaussianUpCrossings:
 
         return self.upcrossing_mean_rate(u=u) + 2 * integral
     
-    def upcrossing_variance_CLT(self, T, u=None, epsilon_left=1e-5, epsilon_right=1e-5, num_points=1000):
-        """
-        Compute the variance of the upcrossings counting process over time T based on the CLT formula.
+    def upcrossing_variance_CLT(
+        self,
+        T: float,
+        u: Optional[Union[float, torch.Tensor]] = None,
+        epsilon_left: float = 1e-5,
+        epsilon_right: float = 1e-5,
+        num_points: int = 1000
+    ) -> torch.Tensor:
+        """Compute variance of upcrossings over time T (CLT formula).
 
-        This method multiplies the per unit time variance by T.
+        Multiplies the per unit time variance by T.
 
-        Parameters:
-            T (float): The length of the time interval.
-            u (float or torch.Tensor, optional): The threshold level.
-                If not provided, the instance's u is used.
-            epsilon_left (float, optional): A small value to avoid singularity at the left endpoint.
-            epsilon_right (float, optional): A small value to avoid singularity at the right endpoint.
-            num_points (int, optional): The number of points for the numerical integration.
+        Args:
+            T: The length of the time interval.
+            u: The threshold level. If not provided, uses instance's u.
+            epsilon_left: Small value to avoid singularity at left endpoint.
+            epsilon_right: Small value to avoid singularity at right endpoint.
+            num_points: Number of points for numerical integration.
 
         Returns:
-            torch.Tensor: The variance of the upcrossings counting process over time T.
+            The variance of upcrossings over time T.
         """
         return T * (self.upcrossing_variance_CLT_per_unit_time(u=u, epsilon_left=epsilon_left, epsilon_right=epsilon_right, num_points=num_points))
-    
-    def downcrossing_variance(self, T, u=None, epsilon_left=1e-5, num_points=1000):
-        """
-        Compute the variance of the downcrossings counting process over a time interval T.
 
-        This method is defined to be the same as the upcrossing variance.
+    def downcrossing_variance(
+        self,
+        T: float,
+        u: Optional[Union[float, torch.Tensor]] = None,
+        epsilon_left: float = 1e-5,
+        num_points: int = 1000
+    ) -> torch.Tensor:
+        """Compute the variance of downcrossings over time interval T.
 
-        Parameters:
-            T (float): The length of the time interval.
-            u (float or torch.Tensor, optional): The threshold level.
-                If not provided, the instance's u is used.
-            epsilon_left (float, optional): A small value to avoid singularity at 0.
-            num_points (int, optional): The number of points for the numerical integration.
+        For stationary Gaussian processes, this equals the upcrossing variance.
+
+        Args:
+            T: The length of the time interval.
+            u: The threshold level. If not provided, uses instance's u.
+            epsilon_left: Small value to avoid singularity at 0.
+            num_points: Number of points for numerical integration.
 
         Returns:
-            torch.Tensor: The variance of the downcrossings counting process over time T.
+            The variance of downcrossings over time T.
         """
         return self.upcrossing_variance(T, u=u, epsilon_left=epsilon_left, num_points=num_points)
-    
-    def downcrossing_variance_CLT_per_unit_time(self, u=None, epsilon_left=1e-5, epsilon_right=1e-5, num_points=1000):
-        """
-        Compute the variance per unit time of the downcrossings counting process based on the CLT formula.
 
-        This is defined to be the same as the upcrossing CLT variance per unit time.
+    def downcrossing_variance_CLT_per_unit_time(
+        self,
+        u: Optional[Union[float, torch.Tensor]] = None,
+        epsilon_left: float = 1e-5,
+        epsilon_right: float = 1e-5,
+        num_points: int = 1000
+    ) -> torch.Tensor:
+        """Compute the variance per unit time of downcrossings (CLT formula).
 
-        Parameters:
-            u (float or torch.Tensor, optional): The threshold level.
-                If not provided, the instance's u is used.
-            epsilon_left (float, optional): A small value to avoid singularity at the left endpoint.
-            epsilon_right (float, optional): A small value to avoid singularity at the right endpoint.
-            num_points (int, optional): The number of points for the numerical integration.
+        For stationary Gaussian processes, this equals the upcrossing variance.
+
+        Args:
+            u: The threshold level. If not provided, uses instance's u.
+            epsilon_left: Small value to avoid singularity at left endpoint.
+            epsilon_right: Small value to avoid singularity at right endpoint.
+            num_points: Number of points for numerical integration.
 
         Returns:
-            torch.Tensor: The variance per unit time of the downcrossings counting process.
+            The variance per unit time of downcrossings.
         """
         return self.upcrossing_variance_CLT_per_unit_time(u=u, epsilon_left=epsilon_left, epsilon_right=epsilon_right, num_points=num_points)
-    
-    def downcrossing_variance_CLT(self, T, u=None, epsilon_left=1e-5, epsilon_right=1e-5, num_points=1000):
-        """
-        Compute the variance of the downcrossings counting process over time T based on the CLT formula.
 
-        This method multiplies the per unit time variance by T and is defined to be the same as the upcrossing variant.
+    def downcrossing_variance_CLT(
+        self,
+        T: float,
+        u: Optional[Union[float, torch.Tensor]] = None,
+        epsilon_left: float = 1e-5,
+        epsilon_right: float = 1e-5,
+        num_points: int = 1000
+    ) -> torch.Tensor:
+        """Compute variance of downcrossings over time T (CLT formula).
 
-        Parameters:
-            T (float): The length of the time interval.
-            u (float or torch.Tensor, optional): The threshold level.
-                If not provided, the instance's u is used.
-            epsilon_left (float, optional): A small value to avoid singularity at the left endpoint.
-            epsilon_right (float, optional): A small value to avoid singularity at the right endpoint.
-            num_points (int, optional): The number of points for the numerical integration.
+        For stationary Gaussian processes, this equals the upcrossing variance.
+
+        Args:
+            T: The length of the time interval.
+            u: The threshold level. If not provided, uses instance's u.
+            epsilon_left: Small value to avoid singularity at left endpoint.
+            epsilon_right: Small value to avoid singularity at right endpoint.
+            num_points: Number of points for numerical integration.
 
         Returns:
-            torch.Tensor: The variance of the downcrossings counting process over time T.
+            The variance of downcrossings over time T.
         """
         return self.upcrossing_variance_CLT(T, u=u, epsilon_left=epsilon_left, epsilon_right=epsilon_right, num_points=num_points)
-    
-    def crossing_variance(self, T, u=None, epsilon_left=1e-5, num_points=1000):
-        """
-        Compute the variance of the crossings counting process over a time interval T.
 
-        The integration domain is mapped into [0, 1] and evaluated using numerical integration.
+    def crossing_variance(
+        self,
+        T: float,
+        u: Optional[Union[float, torch.Tensor]] = None,
+        epsilon_left: float = 1e-5,
+        num_points: int = 1000
+    ) -> torch.Tensor:
+        """Compute the variance of crossings over time interval T.
 
-        Parameters:
-            T (float): The length of the time interval.
-            u (float or torch.Tensor, optional): The threshold level.
-                If not provided, the instance's u is used.
-            epsilon_left (float, optional): A small value to avoid singularity at 0.
-            num_points (int, optional): The number of points for the numerical integration.
+        The integration domain is mapped into [0, 1] using numerical integration.
+
+        Args:
+            T: The length of the time interval.
+            u: The threshold level. If not provided, uses instance's u.
+            epsilon_left: Small value to avoid singularity at 0.
+            num_points: Number of points for numerical integration.
 
         Returns:
-            torch.Tensor: The variance of the crossings counting process over time T.
+            The variance of crossings over time T.
         """
         if u is None:
             u = self.u
@@ -536,21 +601,25 @@ class GaussianUpCrossings:
 
         return T * (self.crossing_mean_rate(u=u) + 2 * integral)
     
-    def crossing_variance_CLT_per_unit_time(self, u=None, epsilon_left=1e-5, epsilon_right=1e-5, num_points=1000):
-        """
-        Compute the variance per unit time of the crossings counting process based on the CLT formula.
+    def crossing_variance_CLT_per_unit_time(
+        self,
+        u: Optional[Union[float, torch.Tensor]] = None,
+        epsilon_left: float = 1e-5,
+        epsilon_right: float = 1e-5,
+        num_points: int = 1000
+    ) -> torch.Tensor:
+        """Compute the variance per unit time of crossings (CLT formula).
 
-        The integration is performed by mapping the time domain into [0, 1] and using numerical integration.
+        The integration maps the time domain into [0, 1] using numerical integration.
 
-        Parameters:
-            u (float or torch.Tensor, optional): The threshold level.
-                If not provided, the instance's u is used.
-            epsilon_left (float, optional): A small value to avoid singularity at the left endpoint.
-            epsilon_right (float, optional): A small value to avoid singularity at the right endpoint.
-            num_points (int, optional): The number of points for the numerical integration.
+        Args:
+            u: The threshold level. If not provided, uses instance's u.
+            epsilon_left: Small value to avoid singularity at left endpoint.
+            epsilon_right: Small value to avoid singularity at right endpoint.
+            num_points: Number of points for numerical integration.
 
         Returns:
-            torch.Tensor: The variance per unit time of the crossings counting process.
+            The variance per unit time of crossings.
         """
         if u is None:
             u = self.u
@@ -563,132 +632,172 @@ class GaussianUpCrossings:
 
         return self.crossing_mean_rate(u=u) + 2 * integral
     
-    def crossing_variance_CLT(self, T, u=None, epsilon_left=1e-5, epsilon_right=1e-5, num_points=1000):
-        """
-        Compute the variance of the crossings counting process over time T based on the CLT formula.
+    def crossing_variance_CLT(
+        self,
+        T: float,
+        u: Optional[Union[float, torch.Tensor]] = None,
+        epsilon_left: float = 1e-5,
+        epsilon_right: float = 1e-5,
+        num_points: int = 1000
+    ) -> torch.Tensor:
+        """Compute variance of crossings over time T (CLT formula).
 
-        This method multiplies the per unit time variance by T.
+        Multiplies the per unit time variance by T.
 
-        Parameters:
-            T (float): The length of the time interval.
-            u (float or torch.Tensor, optional): The threshold level.
-                If not provided, the instance's u is used.
-            epsilon_left (float, optional): A small value to avoid singularity at the left endpoint.
-            epsilon_right (float, optional): A small value to avoid singularity at the right endpoint.
-            num_points (int, optional): The number of points for the numerical integration.
+        Args:
+            T: The length of the time interval.
+            u: The threshold level. If not provided, uses instance's u.
+            epsilon_left: Small value to avoid singularity at left endpoint.
+            epsilon_right: Small value to avoid singularity at right endpoint.
+            num_points: Number of points for numerical integration.
 
         Returns:
-            torch.Tensor: The variance of the crossings counting process over time T.
+            The variance of crossings over time T.
         """
         return T * (self.crossing_variance_CLT_per_unit_time(u=u, epsilon_left=epsilon_left, epsilon_right=epsilon_right, num_points=num_points))
-    
-    def upcrossing_fano_factor_CLT(self, u=None, epsilon_left=1e-5, epsilon_right=1e-5, num_points=1000):
-        """
-        Compute the Fano factor (variance/mean) for the upcrossings counting process using the CLT formula.
 
-        Parameters:
-            u (float or torch.Tensor, optional): The threshold level.
-                If not provided, the instance's u is used.
-            epsilon_left (float, optional): A small value to avoid singularity at the left endpoint.
-            epsilon_right (float, optional): A small value to avoid singularity at the right endpoint.
-            num_points (int, optional): The number of points for the numerical integration.
+    def upcrossing_fano_factor_CLT(
+        self,
+        u: Optional[Union[float, torch.Tensor]] = None,
+        epsilon_left: float = 1e-5,
+        epsilon_right: float = 1e-5,
+        num_points: int = 1000
+    ) -> torch.Tensor:
+        """Compute the Fano factor for upcrossings (CLT formula).
+
+        The Fano factor is variance/mean.
+
+        Args:
+            u: The threshold level. If not provided, uses instance's u.
+            epsilon_left: Small value to avoid singularity at left endpoint.
+            epsilon_right: Small value to avoid singularity at right endpoint.
+            num_points: Number of points for numerical integration.
 
         Returns:
-            torch.Tensor: The Fano factor for the upcrossings counting process.
+            The Fano factor for upcrossings.
         """
         return self.upcrossing_variance_CLT_per_unit_time(u=u, epsilon_left=epsilon_left, epsilon_right=epsilon_right, num_points=num_points) / self.upcrossing_mean_rate(u=u)
-    
-    def downcrossing_fano_factor_CLT(self, u=None, epsilon_left=1e-5, epsilon_right=1e-5, num_points=1000):
-        """
-        Compute the Fano factor (variance/mean) for the downcrossings counting process using the CLT formula.
 
-        Parameters:
-            u (float or torch.Tensor, optional): The threshold level.
-                If not provided, the instance's u is used.
-            epsilon_left (float, optional): A small value to avoid singularity at the left endpoint.
-            epsilon_right (float, optional): A small value to avoid singularity at the right endpoint.
-            num_points (int, optional): The number of points for the numerical integration.
+    def downcrossing_fano_factor_CLT(
+        self,
+        u: Optional[Union[float, torch.Tensor]] = None,
+        epsilon_left: float = 1e-5,
+        epsilon_right: float = 1e-5,
+        num_points: int = 1000
+    ) -> torch.Tensor:
+        """Compute the Fano factor for downcrossings (CLT formula).
+
+        The Fano factor is variance/mean.
+
+        Args:
+            u: The threshold level. If not provided, uses instance's u.
+            epsilon_left: Small value to avoid singularity at left endpoint.
+            epsilon_right: Small value to avoid singularity at right endpoint.
+            num_points: Number of points for numerical integration.
 
         Returns:
-            torch.Tensor: The Fano factor for the downcrossings counting process.
+            The Fano factor for downcrossings.
         """
         return self.downcrossing_variance_CLT_per_unit_time(u=u, epsilon_left=epsilon_left, epsilon_right=epsilon_right, num_points=num_points) / self.downcrossing_mean_rate(u=u)
-    
-    def crossing_fano_factor_CLT(self, u=None, epsilon_left=1e-5, epsilon_right=1e-5, num_points=1000):
-        """
-        Compute the Fano factor (variance/mean) for the crossings counting process using the CLT formula.
 
-        Parameters:
-            u (float or torch.Tensor, optional): The threshold level.
-                If not provided, the instance's u is used.
-            epsilon_left (float, optional): A small value to avoid singularity at the left endpoint.
-            epsilon_right (float, optional): A small value to avoid singularity at the right endpoint.
-            num_points (int, optional): The number of points for the numerical integration.
+    def crossing_fano_factor_CLT(
+        self,
+        u: Optional[Union[float, torch.Tensor]] = None,
+        epsilon_left: float = 1e-5,
+        epsilon_right: float = 1e-5,
+        num_points: int = 1000
+    ) -> torch.Tensor:
+        """Compute the Fano factor for crossings (CLT formula).
+
+        The Fano factor is variance/mean.
+
+        Args:
+            u: The threshold level. If not provided, uses instance's u.
+            epsilon_left: Small value to avoid singularity at left endpoint.
+            epsilon_right: Small value to avoid singularity at right endpoint.
+            num_points: Number of points for numerical integration.
 
         Returns:
-            torch.Tensor: The Fano factor for the crossings counting process.
+            The Fano factor for crossings.
         """
         return self.crossing_variance_CLT_per_unit_time(u=u, epsilon_left=epsilon_left, epsilon_right=epsilon_right, num_points=num_points) / self.crossing_mean_rate(u=u)
-    
-    def upcrossing_fano_factor(self, T, u=None, epsilon_left=1e-5, num_points=1000):
-        """
-        Compute the Fano factor (variance/mean) for the upcrossings counting process over time T.
 
-        Parameters:
-            T (float): The length of the time interval.
-            u (float or torch.Tensor, optional): The threshold level.
-                If not provided, the instance's u is used.
-            epsilon_left (float, optional): A small value to avoid singularity at 0.
-            num_points (int, optional): The number of points for the numerical integration.
+    def upcrossing_fano_factor(
+        self,
+        T: float,
+        u: Optional[Union[float, torch.Tensor]] = None,
+        epsilon_left: float = 1e-5,
+        num_points: int = 1000
+    ) -> torch.Tensor:
+        """Compute the Fano factor for upcrossings over time T.
+
+        The Fano factor is variance/mean.
+
+        Args:
+            T: The length of the time interval.
+            u: The threshold level. If not provided, uses instance's u.
+            epsilon_left: Small value to avoid singularity at 0.
+            num_points: Number of points for numerical integration.
 
         Returns:
-            torch.Tensor: The Fano factor for the upcrossings counting process over time T.
+            The Fano factor for upcrossings over time T.
         """
         return self.upcrossing_variance(T, u=u, epsilon_left=epsilon_left, num_points=num_points) / self.upcrossing_mean(T, u=u)
-    
-    def downcrossing_fano_factor(self, T, u=None, epsilon_left=1e-5, num_points=1000):
-        """
-        Compute the Fano factor (variance/mean) for the downcrossings counting process over time T.
 
-        Parameters:
-            T (float): The length of the time interval.
-            u (float or torch.Tensor, optional): The threshold level.
-                If not provided, the instance's u is used.
-            epsilon_left (float, optional): A small value to avoid singularity at 0.
-            num_points (int, optional): The number of points for the numerical integration.
+    def downcrossing_fano_factor(
+        self,
+        T: float,
+        u: Optional[Union[float, torch.Tensor]] = None,
+        epsilon_left: float = 1e-5,
+        num_points: int = 1000
+    ) -> torch.Tensor:
+        """Compute the Fano factor for downcrossings over time T.
+
+        The Fano factor is variance/mean.
+
+        Args:
+            T: The length of the time interval.
+            u: The threshold level. If not provided, uses instance's u.
+            epsilon_left: Small value to avoid singularity at 0.
+            num_points: Number of points for numerical integration.
 
         Returns:
-            torch.Tensor: The Fano factor for the downcrossings counting process over time T.
+            The Fano factor for downcrossings over time T.
         """
         return self.downcrossing_variance(T, u=u, epsilon_left=epsilon_left, num_points=num_points) / self.downcrossing_mean(T, u=u)
-    
-    def crossing_fano_factor(self, T, u=None, epsilon_left=1e-5, num_points=1000):
-        """
-        Compute the Fano factor (variance/mean) for the crossings counting process over time T.
 
-        Parameters:
-            T (float): The length of the time interval.
-            u (float or torch.Tensor, optional): The threshold level.
-                If not provided, the instance's u is used.
-            epsilon_left (float, optional): A small value to avoid singularity at 0.
-            num_points (int, optional): The number of points for the numerical integration.
+    def crossing_fano_factor(
+        self,
+        T: float,
+        u: Optional[Union[float, torch.Tensor]] = None,
+        epsilon_left: float = 1e-5,
+        num_points: int = 1000
+    ) -> torch.Tensor:
+        """Compute the Fano factor for crossings over time T.
+
+        The Fano factor is variance/mean.
+
+        Args:
+            T: The length of the time interval.
+            u: The threshold level. If not provided, uses instance's u.
+            epsilon_left: Small value to avoid singularity at 0.
+            num_points: Number of points for numerical integration.
 
         Returns:
-            torch.Tensor: The Fano factor for the crossings counting process over time T.
+            The Fano factor for crossings over time T.
         """
         return self.crossing_variance(T, u=u, epsilon_left=epsilon_left, num_points=num_points) / self.crossing_mean(T, u=u)
 
-    def upcrossing_integrand_mean_level(self, t):
-        """
-        Compute the integrand for the variance of the upcrossings counting process at the mean level (u = 0).
+    def upcrossing_integrand_mean_level(self, t: torch.Tensor) -> torch.Tensor:
+        """Compute the integrand for upcrossings variance at mean level (u=0).
 
-        This integral formula is specifically derived for mean level crossings (u = 0).
+        This formula is specifically derived for mean level crossings.
 
-        Parameters:
-            t (torch.Tensor): A tensor representing time(s) at which to evaluate the integrand.
+        Args:
+            t: A tensor representing time(s) at which to evaluate the integrand.
 
         Returns:
-            torch.Tensor: The value of the integrand for the upcrossings variance at u = 0.
+            The value of the integrand for upcrossings variance at u=0.
         """
         r = self.r(t)
         r0 = self.r0
@@ -706,31 +815,29 @@ class GaussianUpCrossings:
 
         return final_integral
     
-    def downcrossing_integrand_mean_level(self, t):
-        """
-        Compute the integrand for the variance of the downcrossings counting process at the mean level (u = 0).
+    def downcrossing_integrand_mean_level(self, t: torch.Tensor) -> torch.Tensor:
+        """Compute the integrand for downcrossings variance at mean level (u=0).
 
-        This method is defined to be the same as the upcrossing integrand for mean level crossings.
+        For stationary Gaussian processes, equals the upcrossing integrand.
 
-        Parameters:
-            t (torch.Tensor): A tensor representing time(s) at which to evaluate the integrand.
+        Args:
+            t: A tensor representing time(s) at which to evaluate the integrand.
 
         Returns:
-            torch.Tensor: The value of the integrand for the downcrossings variance at u = 0.
+            The value of the integrand for downcrossings variance at u=0.
         """
         return self.upcrossing_integrand_mean_level(t=t)
-    
-    def crossing_integrand_mean_level(self, t):
-        """
-        Compute the integrand for the variance of the crossings counting process at the mean level (u = 0).
 
-        This integral formula is specifically derived for the variance of crossings when u = 0.
+    def crossing_integrand_mean_level(self, t: torch.Tensor) -> torch.Tensor:
+        """Compute the integrand for crossings variance at mean level (u=0).
 
-        Parameters:
-            t (torch.Tensor): A tensor representing time(s) at which to evaluate the integrand.
+        This formula is specifically derived for crossings at the mean level.
+
+        Args:
+            t: A tensor representing time(s) at which to evaluate the integrand.
 
         Returns:
-            torch.Tensor: The value of the integrand for the crossings variance at u = 0.
+            The value of the integrand for crossings variance at u=0.
         """
         r = self.r(t)
         r0 = self.r0

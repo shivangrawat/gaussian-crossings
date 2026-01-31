@@ -1,3 +1,11 @@
+"""Owen's T function implementation with PyTorch autograd support.
+
+This module provides a differentiable implementation of Owen's T function
+that can be used with PyTorch's automatic differentiation system.
+"""
+
+from typing import Union
+
 import torch
 import torch.special
 import scipy.special
@@ -5,8 +13,31 @@ import math
 
 
 class OwensT(torch.autograd.Function):
+    """PyTorch autograd Function for Owen's T function.
+
+    Owen's T function T(h, a) is defined as:
+        T(h, a) = (1/2π) ∫₀ᵃ exp(-h²(1+t²)/2) / (1+t²) dt
+
+    This implementation wraps scipy.special.owens_t and provides
+    analytical gradients for backpropagation.
+    """
+
     @staticmethod
-    def forward(ctx, h, a):
+    def forward(
+        ctx: torch.autograd.function.FunctionCtx,
+        h: torch.Tensor,
+        a: torch.Tensor
+    ) -> torch.Tensor:
+        """Compute Owen's T function.
+
+        Args:
+            ctx: Context object for saving tensors for backward pass.
+            h: First argument of Owen's T function.
+            a: Second argument of Owen's T function.
+
+        Returns:
+            The value of Owen's T function T(h, a).
+        """
         # Convert to NumPy arrays (detach to avoid tracking in autograd)
         h_np = h.detach().cpu().numpy()
         a_np = a.detach().cpu().numpy()
@@ -18,12 +49,32 @@ class OwensT(torch.autograd.Function):
         return torch.tensor(result, dtype=h.dtype, device=h.device)
 
     @staticmethod
-    def backward(ctx, grad_output):
+    def backward(
+        ctx: torch.autograd.function.FunctionCtx,
+        grad_output: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """Compute gradients of Owen's T function.
+
+        The analytical derivatives are:
+            ∂T/∂h = -exp(-h²/2) * erf(a*h/√2) / (2√(2π))
+            ∂T/∂a = exp(-h²(1+a²)/2) / (2π(1+a²))
+
+        Args:
+            ctx: Context object containing saved tensors.
+            grad_output: Gradient of the loss with respect to the output.
+
+        Returns:
+            Tuple of gradients with respect to h and a.
+        """
         h, a = ctx.saved_tensors
 
         # Analytical derivative with respect to h:
         # dT/dh = - exp(-h^2/2) * erf(a*h/sqrt(2)) / (2 * sqrt(2*pi))
-        dT_dh = - torch.exp(-h**2 / 2) * torch.special.erf(a * h / math.sqrt(2)) / (2 * math.sqrt(2 * math.pi))
+        dT_dh = (
+            -torch.exp(-h**2 / 2)
+            * torch.special.erf(a * h / math.sqrt(2))
+            / (2 * math.sqrt(2 * math.pi))
+        )
 
         # Analytical derivative with respect to a:
         # dT/da = exp(-h^2*(1+a^2)/2) / (2*pi*(1+a^2))
@@ -32,6 +83,26 @@ class OwensT(torch.autograd.Function):
         # Chain rule: multiply with incoming gradient
         return grad_output * dT_dh, grad_output * dT_da
 
-# Convenience function to call our custom OwenT
-def owensT(h, a):
+
+def owensT(h: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
+    """Compute Owen's T function with autograd support.
+
+    Owen's T function T(h, a) is defined as:
+        T(h, a) = (1/2π) ∫₀ᵃ exp(-h²(1+t²)/2) / (1+t²) dt
+
+    This is a convenience function that applies the OwensT autograd Function.
+
+    Args:
+        h: First argument of Owen's T function.
+        a: Second argument of Owen's T function.
+
+    Returns:
+        The value of Owen's T function T(h, a).
+
+    Example:
+        >>> h = torch.tensor(1.0, requires_grad=True)
+        >>> a = torch.tensor(0.5, requires_grad=True)
+        >>> result = owensT(h, a)
+        >>> result.backward()
+    """
     return OwensT.apply(h, a)

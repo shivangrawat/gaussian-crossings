@@ -1,90 +1,268 @@
-import torch 
+"""Dynamical system models for stochastic processes.
+
+This module provides classes representing stochastic dynamical systems
+that can be used for numerical simulation of Gaussian processes via
+stochastic differential equations (SDEs).
+"""
+
+from typing import Optional
+
+import torch
 import math
-import numpy as np
+
 from gaussian_crossings.utils.utils import dynm_fun
 
 
 class filtered_OU:
-    def __init__(self, tau_e=1.0, tau_f=1.0, sigma=1.0):
-        # Define the model parameters (effective time constant, filtration time constant, and noise strength)
+    """Filtered Ornstein-Uhlenbeck process model.
+
+    This class represents an OU process that has been passed through a
+    first-order low-pass filter. The resulting system is two-dimensional.
+
+    Attributes:
+        tau_e: Effective time constant of the OU process.
+        tau_f: Filter time constant.
+        sigma: Noise strength (standard deviation).
+        dim: Dimension of the state space (always 2).
+        J: Jacobian matrix of the linearized system.
+    """
+
+    def __init__(
+        self,
+        tau_e: float = 1.0,
+        tau_f: float = 1.0,
+        sigma: float = 1.0
+    ) -> None:
+        """Initialize the filtered OU process.
+
+        Args:
+            tau_e: Effective time constant of the OU process.
+            tau_f: Filter time constant.
+            sigma: Noise strength (standard deviation).
+        """
         self.tau_e = tau_e
         self.tau_f = tau_f
         self.sigma = sigma
         self.dim = 2
 
-        # Define the jacobian
-        self.J = torch.tensor([[-1 / self.tau_e, 0], [1 / self.tau_f, -1 / self.tau_f]])
-    
-    def noise_vector(self):
-        # This function defines the noise vector for the filtered OU process.
-        return torch.tensor([self.sigma * math.sqrt(2 / self.tau_e), 0.])
+        # Define the Jacobian matrix
+        self.J = torch.tensor([
+            [-1 / self.tau_e, 0],
+            [1 / self.tau_f, -1 / self.tau_f]
+        ])
+
+    def noise_vector(self) -> torch.Tensor:
+        """Return the noise diffusion vector.
+
+        The noise acts only on the first component (x).
+
+        Returns:
+            Tensor of shape (2,) containing the noise coefficients.
+        """
+        return torch.tensor([self.sigma * math.sqrt(2 / self.tau_e), 0.0])
 
     @dynm_fun
-    def _dynamical_fun(self, t, vars):
-        # This function defines the dynamics of the filtered OU process.
-        vars = vars.squeeze(0)  # Remove the extra dimension
+    def _dynamical_fun(
+        self,
+        t: Optional[float],
+        vars: torch.Tensor
+    ) -> torch.Tensor:
+        """Compute the drift term of the SDE.
+
+        The dynamics are:
+            dx/dt = -x / tau_e
+            dy/dt = (x - y) / tau_f
+
+        Args:
+            t: Time (unused, included for API compatibility).
+            vars: State vector of shape (2,) containing [x, y].
+
+        Returns:
+            Time derivative [dx/dt, dy/dt] as a tensor of shape (2,).
+        """
+        vars = vars.squeeze(0)
         x = vars[0:1]
         y = vars[1:]
         dxdt = (1 / self.tau_e) * (-x)
         dydt = (1 / self.tau_f) * (-y + x)
         return torch.cat((dxdt, dydt))
-    
-    def steady_state(self):
-        return torch.tensor([0., 0.])
+
+    def steady_state(self) -> torch.Tensor:
+        """Return the steady-state (equilibrium) of the system.
+
+        Returns:
+            Tensor of shape (2,) containing the equilibrium state [0, 0].
+        """
+        return torch.tensor([0.0, 0.0])
+
 
 class OU_noise:
-    def __init__(self, tau_e=1.0, tau_f=1.0, sigma=1.0):
-        # Define the model parameters (effective time constant, filtration time constant, and noise strength)
+    """Process driven by Ornstein-Uhlenbeck noise.
+
+    This class represents a mean-reverting process where the driving
+    noise is itself an OU process. The resulting system is two-dimensional.
+
+    Attributes:
+        tau_e: Effective time constant of the main process.
+        tau_f: Time constant of the OU noise.
+        sigma: Noise strength (standard deviation).
+        dim: Dimension of the state space (always 2).
+        J: Jacobian matrix of the linearized system.
+    """
+
+    def __init__(
+        self,
+        tau_e: float = 1.0,
+        tau_f: float = 1.0,
+        sigma: float = 1.0
+    ) -> None:
+        """Initialize the OU noise process.
+
+        Args:
+            tau_e: Effective time constant of the main process.
+            tau_f: Time constant of the OU noise.
+            sigma: Noise strength (standard deviation).
+        """
         self.tau_e = tau_e
         self.tau_f = tau_f
         self.sigma = sigma
         self.dim = 2
 
-        # Define the jacobian
-        self.J = torch.tensor([[-1 / self.tau_f, 0], [1 / self.tau_e, -1 / self.tau_e]])
-    
-    def noise_vector(self):
-        # This function defines the noise vector for the OU noise process.
-        return torch.tensor([self.sigma * math.sqrt(2 / self.tau_f), 0.])
+        # Define the Jacobian matrix
+        self.J = torch.tensor([
+            [-1 / self.tau_f, 0],
+            [1 / self.tau_e, -1 / self.tau_e]
+        ])
+
+    def noise_vector(self) -> torch.Tensor:
+        """Return the noise diffusion vector.
+
+        The noise acts only on the first component (x).
+
+        Returns:
+            Tensor of shape (2,) containing the noise coefficients.
+        """
+        return torch.tensor([self.sigma * math.sqrt(2 / self.tau_f), 0.0])
 
     @dynm_fun
-    def _dynamical_fun(self, t, vars):
-        # This function defines the dynamics of the OU noise process.
-        vars = vars.squeeze(0)  # Remove the extra dimension
+    def _dynamical_fun(
+        self,
+        t: Optional[float],
+        vars: torch.Tensor
+    ) -> torch.Tensor:
+        """Compute the drift term of the SDE.
+
+        The dynamics are:
+            dx/dt = -x / tau_f
+            dy/dt = (x - y) / tau_e
+
+        Args:
+            t: Time (unused, included for API compatibility).
+            vars: State vector of shape (2,) containing [x, y].
+
+        Returns:
+            Time derivative [dx/dt, dy/dt] as a tensor of shape (2,).
+        """
+        vars = vars.squeeze(0)
         x = vars[0:1]
         y = vars[1:]
         dxdt = (1 / self.tau_f) * (-x)
         dydt = (1 / self.tau_e) * (-y + x)
         return torch.cat((dxdt, dydt))
-    
-    def steady_state(self):
-        return torch.tensor([0., 0.])
-    
+
+    def steady_state(self) -> torch.Tensor:
+        """Return the steady-state (equilibrium) of the system.
+
+        Returns:
+            Tensor of shape (2,) containing the equilibrium state [0, 0].
+        """
+        return torch.tensor([0.0, 0.0])
+
+
 class damped_harmonic_oscillator_noise:
-    def __init__(self, zeta=0.5, omega0=1.0, temp=1.0):
-        # Parameters: damping ratio (zeta), natural frequency (omega0), Temperature (temp, noise strength)
+    """Stochastic damped harmonic oscillator model.
+
+    This class represents a damped harmonic oscillator driven by thermal
+    noise, following the Langevin equation:
+        d²x/dt² + 2*zeta*omega0*dx/dt + omega0²*x = sqrt(4*zeta*omega0*T)*eta(t)
+
+    where eta(t) is white noise.
+
+    Attributes:
+        zeta: Damping ratio (zeta < 1: underdamped, zeta = 1: critical,
+            zeta > 1: overdamped).
+        omega0: Natural angular frequency.
+        temp: Temperature (controls noise strength).
+        dim: Dimension of the state space (always 2).
+        J: Jacobian matrix of the linearized system.
+    """
+
+    def __init__(
+        self,
+        zeta: float = 0.5,
+        omega0: float = 1.0,
+        temp: float = 1.0
+    ) -> None:
+        """Initialize the damped harmonic oscillator.
+
+        Args:
+            zeta: Damping ratio.
+            omega0: Natural angular frequency.
+            temp: Temperature (noise strength).
+        """
         self.zeta = zeta
         self.omega0 = omega0
         self.temp = temp
         self.dim = 2
 
         # Jacobian of the linearized system
-        self.J = torch.tensor([[0, 1],
-                               [-self.omega0**2, -2 * self.zeta * self.omega0]])
+        self.J = torch.tensor([
+            [0, 1],
+            [-self.omega0**2, -2 * self.zeta * self.omega0]
+        ])
 
-    def noise_vector(self):
-        # Noise vector acts on velocity only
-        return torch.tensor([0., math.sqrt(4 * self.zeta * self.omega0 * self.temp)])
+    def noise_vector(self) -> torch.Tensor:
+        """Return the noise diffusion vector.
+
+        The noise acts only on the velocity component (second element).
+
+        Returns:
+            Tensor of shape (2,) containing the noise coefficients.
+        """
+        return torch.tensor([0.0, math.sqrt(4 * self.zeta * self.omega0 * self.temp)])
 
     @dynm_fun
-    def _dynamical_fun(self, t, vars):
-        vars = vars.squeeze(0)  # Remove extra dimension
+    def _dynamical_fun(
+        self,
+        t: Optional[float],
+        vars: torch.Tensor
+    ) -> torch.Tensor:
+        """Compute the drift term of the SDE.
+
+        The dynamics are:
+            dx/dt = v
+            dv/dt = -2*zeta*omega0*v - omega0²*x
+
+        Args:
+            t: Time (unused, included for API compatibility).
+            vars: State vector of shape (2,) containing [x, v].
+
+        Returns:
+            Time derivative [dx/dt, dv/dt] as a tensor of shape (2,).
+        """
+        vars = vars.squeeze(0)
         x = vars[0:1]
         y = vars[1:]
         dxdt = y
         dydt = -2 * self.zeta * self.omega0 * y - (self.omega0**2) * x
         return torch.cat((dxdt, dydt))
 
-    def steady_state(self):
-        # Equilibrium at rest (zero displacement and velocity)
-        return torch.tensor([0., 0.])
+    def steady_state(self) -> torch.Tensor:
+        """Return the steady-state (equilibrium) of the system.
+
+        The equilibrium is at rest with zero displacement and velocity.
+
+        Returns:
+            Tensor of shape (2,) containing the equilibrium state [0, 0].
+        """
+        return torch.tensor([0.0, 0.0])

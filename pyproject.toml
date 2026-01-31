@@ -1,0 +1,21 @@
+[project]
+name = "gaussian-crossings"
+version = "0.1.0"
+description = "Gaussian crossings analysis"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy",
+    "scipy",
+    "matplotlib",
+    "torch",
+]
+
+[project.optional-dependencies]
+dev = [
+    "jupyter",
+    "ipykernel",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

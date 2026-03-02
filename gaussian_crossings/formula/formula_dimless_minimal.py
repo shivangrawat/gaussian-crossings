@@ -1,9 +1,10 @@
-"""Minimal dimensionless formula implementation for Gaussian process level crossings.
+"""Minimal dimensionless formulation of exact upcrossing statistics.
 
-This module provides the GaussianUpCrossingsDimless_minimal class which computes
-exact mean and variance for upcrossings of stationary Gaussian processes using
-dimensionless (tau=1) formulations. This is a stripped-down version containing
-only the essential methods for upcrossing calculations.
+This module provides the ``GaussianUpCrossingsDimless_minimal`` class, a
+lightweight version of ``GaussianUpCrossingsDimless`` that contains only the
+essential methods for computing the mean and variance of upcrossings in
+dimensionless time (tau=1).  It is intended for use cases where downcrossing,
+total-crossing, and Fano factor methods are not needed.
 """
 
 from typing import Any, Callable, Optional, Tuple, Union
@@ -21,16 +22,20 @@ torch.set_default_dtype(torch.float64)
 class GaussianUpCrossingsDimless_minimal:
     """Minimal class for dimensionless upcrossing statistics of Gaussian processes.
 
-    This class computes upcrossing statistics using dimensionless time (tau=1),
-    then scales results appropriately. Contains only essential methods.
+    A lightweight alternative to ``GaussianUpCrossingsDimless`` that provides
+    only the mean rate, variance, and the upcrossing integrand I^+(t).
+    Useful when only upcrossing statistics are needed and computational
+    overhead should be minimized.
 
     Attributes:
-        r_func: Correlation function of the process.
+        r_func: Correlation function r(t) of the stationary Gaussian process.
         u: Threshold level for crossings.
-        tau: Time constant for scaling results.
-        r0: Correlation function value at t=0 (variance).
-        p0: First derivative of correlation at t=0 (always 0).
-        q0: Negative second derivative of correlation at t=0.
+        tau: Physical timescale used to rescale rates and variances.
+        r0: Process variance, r(0).
+        p0: First derivative of the correlation at t=0 (always 0 for a
+            stationary process).
+        q0: Negative second derivative of the correlation at t=0,
+            i.e. q0 = -r''(0).
     """
 
     def __init__(
@@ -219,16 +224,16 @@ class GaussianUpCrossingsDimless_minimal:
         self,
         u: Optional[Union[float, torch.Tensor]] = None
     ) -> torch.Tensor:
-        """Compute the mean rate of upcrossings per unit time.
+        """Compute the mean rate of upcrossings per unit time (Kac-Rice formula).
 
-        The rate is given by:
-            (1/tau) * (1/(2*pi)) * sqrt(q0/r0) * exp(-u^2/(2*r0))
+        Implements the Kac-Rice formula rescaled by the physical timescale:
+            E[N_u^+] / T = (1/tau) * (1/(2*pi)) * sqrt(q0/r0) * exp(-u^2/(2*r0))
 
         Args:
-            u: The threshold level. If not provided, uses instance's u.
+            u: Threshold level. If not provided, uses the instance's u.
 
         Returns:
-            The mean rate of upcrossings per unit time.
+            The mean upcrossing rate per unit time.
         """
         if u is None:
             u = self.u
@@ -255,17 +260,19 @@ class GaussianUpCrossingsDimless_minimal:
         t: torch.Tensor,
         u: Optional[Union[float, torch.Tensor]] = None
     ) -> torch.Tensor:
-        """Compute the integrand for upcrossings variance.
+        """Compute the integrand I^+(t) for the upcrossing variance formula.
 
-        Evaluates the integral formula derived for the variance of upcrossings
-        using the auxiliary quantities alpha, beta, gamma, and delta.
+        Evaluates the closed-form integrand from Theorem 1 (Eq. 13 of the
+        paper) in dimensionless time, expressed in terms of the error function
+        and Owen's T function via the auxiliary quantities alpha, beta, gamma,
+        and delta.
 
         Args:
-            t: A tensor representing time(s) at which to evaluate the integrand.
-            u: The threshold level. If not provided, uses instance's u.
+            t: Time lag(s) at which to evaluate the integrand.
+            u: Threshold level. If not provided, uses the instance's u.
 
         Returns:
-            The value of the integrand for upcrossings variance.
+            The integrand value I^+(t) for the upcrossing variance.
         """
         if u is None:
             u = self.u

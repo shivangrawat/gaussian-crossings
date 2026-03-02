@@ -1,7 +1,10 @@
-"""Owen's T function implementation with PyTorch autograd support.
+"""Differentiable Owen's T function for PyTorch.
 
-This module provides a differentiable implementation of Owen's T function
-that can be used with PyTorch's automatic differentiation system.
+This module provides a PyTorch autograd-compatible implementation of Owen's
+T function, which appears in the exact variance expressions for arbitrary-
+level crossings (Theorems 1 and 2 of the paper).  The forward pass wraps
+``scipy.special.owens_t``, and analytical gradients are provided for
+backpropagation through the variance integrand.
 """
 
 from typing import Union

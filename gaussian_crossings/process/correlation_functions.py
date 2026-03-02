@@ -1,8 +1,12 @@
-"""Correlation functions for various Gaussian stochastic processes.
+"""Autocorrelation functions for stationary Gaussian stochastic processes.
 
 This module provides autocorrelation/autocovariance functions for several
-commonly used stationary Gaussian processes, including damped harmonic
-oscillators, Ornstein-Uhlenbeck processes, and various kernel functions.
+commonly used stationary Gaussian processes, including the stochastic damped
+harmonic oscillator, Ornstein-Uhlenbeck processes, and standard kernel
+functions (rational quadratic, squared exponential, Matern).  These
+correlation functions serve as inputs to the exact variance and Fano factor
+formulae in the ``formula`` subpackage and are also used for simulation-based
+validation of the analytical results.
 """
 
 from typing import Any, Union
@@ -19,15 +23,18 @@ def r_damped_harmonic_oscillator_noise(
     zeta: float,
     **kwargs: Any
 ) -> torch.Tensor:
-    """Compute the autocorrelation function of a damped harmonic oscillator.
+    """Compute the autocorrelation function of a stochastic damped harmonic oscillator.
 
-    Computes the autocorrelation function for a stochastic damped harmonic
-    oscillator driven by thermal noise. The correlation function depends on
-    the damping regime (underdamped, critically damped, or overdamped).
+    Computes the stationary autocorrelation function for a damped harmonic
+    oscillator driven by thermal white noise, as described in Section III.A
+    of the paper.  The noise amplitude satisfies the fluctuation-dissipation
+    theorem.  The correlation function has three qualitatively different
+    forms depending on the damping regime: oscillatory decay (underdamped),
+    critically damped, or bi-exponential decay (overdamped).
 
     Args:
         t: Time lag(s) at which to evaluate the correlation function.
-        temp: Temperature of the system (controls noise strength).
+        temp: Temperature of the system (controls noise strength, with k_B=1).
         omega0: Natural angular frequency of the oscillator.
         zeta: Damping ratio (zeta < 1: underdamped, zeta = 1: critically
             damped, zeta > 1: overdamped).
@@ -39,7 +46,8 @@ def r_damped_harmonic_oscillator_noise(
         Autocorrelation values r(t) at the specified time lag(s).
 
     Note:
-        The variance of the process is r(0) = temp / omega0^2.
+        The variance of the process is r(0) = temp / omega0^2 in all
+        damping regimes, as guaranteed by the equipartition theorem.
     """
     dtype = kwargs.get("dtype", torch.float64)
     device = kwargs.get("device", None)
@@ -96,6 +104,8 @@ def r_filtered_OU(
 
     The filtered OU process is obtained by passing an OU process through
     a first-order low-pass filter with time constant tau_f = kappa * tau.
+    This bi-exponential correlation structure can be mapped to the
+    overdamped SDHO correlation function.
 
     Args:
         t: Time lag(s) at which to evaluate the autocovariance.
@@ -122,10 +132,12 @@ def r_OU_noise(
     kappa: float,
     **kwargs: Any
 ) -> torch.Tensor:
-    """Compute the autocovariance function of a process driven by OU noise.
+    """Compute the autocovariance function of a mean-reverting process driven by OU noise.
 
-    This represents the correlation function of a mean-reverting process
-    where the driving noise is itself an Ornstein-Uhlenbeck process.
+    This represents the correlation function of the process y(t) from
+    Section III.B of the paper, where a mean-reverting process is driven
+    by Ornstein-Uhlenbeck noise.  The resulting bi-exponential correlation
+    structure supports both sub- and super-Poissonian crossing statistics.
 
     Args:
         t: Time lag(s) at which to evaluate the autocovariance.
@@ -175,8 +187,11 @@ def r_rational_quadratic(
     """Compute the rational quadratic autocorrelation function.
 
     The rational quadratic kernel can be seen as an infinite mixture of
-    squared exponential kernels with different length scales. As alpha -> inf,
-    it converges to the squared exponential kernel.
+    squared exponential kernels with different length scales.  As alpha -> inf,
+    it converges to the squared exponential kernel.  This kernel is analyzed
+    in Section III.C of the paper, where the shape parameter alpha is shown
+    to critically influence crossing statistics: smaller alpha (heavier-tailed,
+    longer-range correlations) leads to super-Poissonian Fano factors.
 
     Args:
         t: Time lag(s) at which to evaluate the autocorrelation.

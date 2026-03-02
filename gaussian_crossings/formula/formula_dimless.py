@@ -1,8 +1,11 @@
-"""Dimensionless formula implementation for Gaussian process level crossings.
+"""Dimensionless formulation of exact crossing statistics for Gaussian processes.
 
-This module provides the GaussianUpCrossingsDimless class which computes exact
-mean, variance, and Fano factor for level crossings of stationary Gaussian
-processes using dimensionless (tau=1) formulations.
+This module provides the ``GaussianUpCrossingsDimless`` class, which implements
+the same exact analytical formulae as ``GaussianUpCrossings`` but operates in
+dimensionless time (tau=1) and rescales results by the physical timescale tau.
+This is convenient for processes whose correlation function is naturally
+parameterized by a single timescale, allowing the integrand to be evaluated
+once and reused across different tau values.
 """
 
 from typing import Any, Callable, Optional, Tuple, Union
@@ -18,18 +21,26 @@ torch.set_default_dtype(torch.float64)
 
 
 class GaussianUpCrossingsDimless:
-    """Compute dimensionless level crossing statistics for Gaussian processes.
+    """Compute exact level crossing statistics in dimensionless time.
 
-    This class computes crossing statistics using dimensionless time (tau=1),
-    then scales results appropriately for the actual time constant.
+    This class evaluates the correlation function with tau=1 (dimensionless
+    time) and rescales the mean rate, variance, and Fano factor by the
+    physical timescale tau.  This is equivalent to ``GaussianUpCrossings``
+    but avoids redundant computation when sweeping over tau.
+
+    The Fano factor is independent of tau and characterizes the crossing
+    regularity: F = 1 (Poisson), F < 1 (sub-Poissonian, anti-bunching),
+    F > 1 (super-Poissonian, bunching).
 
     Attributes:
-        r_func: Correlation function of the process.
+        r_func: Correlation function r(t) of the stationary Gaussian process.
         u: Threshold level for crossings.
-        tau: Time constant for scaling results.
-        r0: Correlation function value at t=0 (variance).
-        p0: First derivative of correlation at t=0 (always 0).
-        q0: Negative second derivative of correlation at t=0.
+        tau: Physical timescale used to rescale rates and variances.
+        r0: Process variance, r(0).
+        p0: First derivative of the correlation at t=0 (always 0 for a
+            stationary process).
+        q0: Negative second derivative of the correlation at t=0,
+            i.e. q0 = -r''(0).
     """
 
     def __init__(
@@ -218,16 +229,19 @@ class GaussianUpCrossingsDimless:
         self,
         u: Optional[Union[float, torch.Tensor]] = None
     ) -> torch.Tensor:
-        """Compute the mean rate of upcrossings per unit time.
+        """Compute the mean rate of upcrossings per unit time (Kac-Rice formula).
 
-        The rate is given by:
-            (1/tau) * (1/(2*pi)) * sqrt(q0/r0) * exp(-u^2/(2*r0))
+        Implements the Kac-Rice formula rescaled by the physical timescale:
+            E[N_u^+] / T = (1/tau) * (1/(2*pi)) * sqrt(q0/r0) * exp(-u^2/(2*r0))
+
+        This depends only on the local properties of the correlation function
+        at the origin and is independent of the full correlation structure.
 
         Args:
-            u: The threshold level. If not provided, uses instance's u.
+            u: Threshold level. If not provided, uses the instance's u.
 
         Returns:
-            The mean rate of upcrossings per unit time.
+            The mean upcrossing rate per unit time.
         """
         if u is None:
             u = self.u
@@ -318,21 +332,24 @@ class GaussianUpCrossingsDimless:
         t: torch.Tensor,
         u: Optional[Union[float, torch.Tensor]] = None
     ) -> torch.Tensor:
-        """Compute the integrand for upcrossings variance.
+        """Compute the integrand I^+(t) for the upcrossing variance formula.
 
-        Evaluates the integral formula derived for the variance of upcrossings
-        using the auxiliary quantities alpha, beta, gamma, and delta.
+        Evaluates the closed-form integrand from Theorem 1 (Eq. 13 of the
+        paper) in dimensionless time, expressed in terms of the error function
+        and Owen's T function via the auxiliary quantities alpha, beta, gamma,
+        and delta.  The variance is obtained by integrating this quantity
+        over time and rescaling by tau.
 
         Args:
-            t: A tensor representing time(s) at which to evaluate the integrand.
-            u: The threshold level. If not provided, uses instance's u.
+            t: Time lag(s) at which to evaluate the integrand.
+            u: Threshold level. If not provided, uses the instance's u.
 
         Returns:
-            The value of the integrand for upcrossings variance.
+            The integrand value I^+(t) for the upcrossing variance.
         """
         if u is None:
             u = self.u
-        
+
         r = self.r(t)
         r0 = self.r0
         q0 = self.q0
@@ -362,16 +379,17 @@ class GaussianUpCrossingsDimless:
         t: torch.Tensor,
         u: Optional[Union[float, torch.Tensor]] = None
     ) -> torch.Tensor:
-        """Compute the integrand for downcrossings variance.
+        """Compute the integrand for downcrossing variance in dimensionless time.
 
-        For stationary Gaussian processes, this equals the upcrossing integrand.
+        For stationary Gaussian processes, this equals the upcrossing integrand
+        due to the symmetry of the velocity distribution.
 
         Args:
-            t: A tensor representing time(s) at which to evaluate the integrand.
-            u: The threshold level. If not provided, uses instance's u.
+            t: Time lag(s) at which to evaluate the integrand.
+            u: Threshold level. If not provided, uses the instance's u.
 
         Returns:
-            The value of the integrand for downcrossings variance.
+            The integrand value for the downcrossing variance.
         """
         return self.upcrossing_integrand(t, u=u)
 
@@ -380,17 +398,18 @@ class GaussianUpCrossingsDimless:
         t: torch.Tensor,
         u: Optional[Union[float, torch.Tensor]] = None
     ) -> torch.Tensor:
-        """Compute the integrand for crossings variance.
+        """Compute the integrand I(t) for the total crossing variance formula.
 
-        Evaluates the integral formula derived for the variance of crossings
-        using the auxiliary quantities alpha, beta, gamma, and delta.
+        Evaluates the closed-form integrand from Theorem 2 (Eq. 19 of the
+        paper) for bidirectional crossings in dimensionless time, expressed
+        in terms of the error function and Owen's T function.
 
         Args:
-            t: A tensor representing time(s) at which to evaluate the integrand.
-            u: The threshold level. If not provided, uses instance's u.
+            t: Time lag(s) at which to evaluate the integrand.
+            u: Threshold level. If not provided, uses the instance's u.
 
         Returns:
-            The value of the integrand for crossings variance.
+            The integrand value I(t) for the total crossing variance.
         """
         if u is None:
             u = self.u
@@ -677,18 +696,22 @@ class GaussianUpCrossingsDimless:
         epsilon_right: float = 1e-5,
         num_points: int = 1000
     ) -> torch.Tensor:
-        """Compute the Fano factor for upcrossings (CLT formula).
+        """Compute the asymptotic Fano factor F^+ for upcrossings.
 
-        The Fano factor is variance/mean. Note that this is independent of tau.
+        The Fano factor is the variance-to-mean ratio in the long-time
+        (T -> infinity) limit.  It is independent of the timescale tau.
+        F^+ = 1 for Poisson-distributed crossings, F^+ < 1 indicates
+        sub-Poissonian regularity (anti-bunching), and F^+ > 1 indicates
+        super-Poissonian clustering (bunching).
 
         Args:
-            u: The threshold level. If not provided, uses instance's u.
+            u: Threshold level. If not provided, uses the instance's u.
             epsilon_left: Small value to avoid singularity at left endpoint.
             epsilon_right: Small value to avoid singularity at right endpoint.
             num_points: Number of points for numerical integration.
 
         Returns:
-            The Fano factor for upcrossings.
+            The asymptotic Fano factor for upcrossings.
         """
         if u is None:
             u = self.u
@@ -734,18 +757,22 @@ class GaussianUpCrossingsDimless:
         epsilon_right: float = 1e-5,
         num_points: int = 1000
     ) -> torch.Tensor:
-        """Compute the Fano factor for crossings (CLT formula).
+        """Compute the asymptotic Fano factor F for total crossings.
 
-        The Fano factor is variance/mean.
+        The Fano factor is the variance-to-mean ratio in the long-time
+        (T -> infinity) limit.  It is independent of the timescale tau.
+        F = 1 for Poisson-distributed crossings, F < 1 indicates
+        sub-Poissonian regularity (anti-bunching), and F > 1 indicates
+        super-Poissonian clustering (bunching).
 
         Args:
-            u: The threshold level. If not provided, uses instance's u.
+            u: Threshold level. If not provided, uses the instance's u.
             epsilon_left: Small value to avoid singularity at left endpoint.
             epsilon_right: Small value to avoid singularity at right endpoint.
             num_points: Number of points for numerical integration.
 
         Returns:
-            The Fano factor for crossings.
+            The asymptotic Fano factor for total crossings.
         """
         if u is None:
             u = self.u
@@ -831,13 +858,16 @@ class GaussianUpCrossingsDimless:
     def upcrossing_integrand_mean_level(self, t: torch.Tensor) -> torch.Tensor:
         """Compute the integrand for upcrossings variance at mean level (u=0).
 
-        This formula is specifically derived for mean level crossings.
+        When the threshold equals the process mean (u=0), the general
+        formula simplifies: Owen's T function reduces to an arctangent,
+        recovering the classical result of Steinberg (1955) and
+        Leadbetter (1966).
 
         Args:
-            t: A tensor representing time(s) at which to evaluate the integrand.
+            t: Time lag(s) at which to evaluate the integrand.
 
         Returns:
-            The value of the integrand for upcrossings variance at u=0.
+            The simplified integrand value for mean-level upcrossing variance.
         """
         r = self.r(t)
         r0 = self.r0
@@ -869,15 +899,17 @@ class GaussianUpCrossingsDimless:
         return self.upcrossing_integrand_mean_level(t=t)
 
     def crossing_integrand_mean_level(self, t: torch.Tensor) -> torch.Tensor:
-        """Compute the integrand for crossings variance at mean level (u=0).
+        """Compute the integrand for total crossing variance at mean level (u=0).
 
-        This formula is specifically derived for crossings at the mean level.
+        When the threshold equals the process mean (u=0), the general
+        formula for bidirectional crossings simplifies to an expression
+        involving only arctangent terms.
 
         Args:
-            t: A tensor representing time(s) at which to evaluate the integrand.
+            t: Time lag(s) at which to evaluate the integrand.
 
         Returns:
-            The value of the integrand for crossings variance at u=0.
+            The simplified integrand value for mean-level crossing variance.
         """
         r = self.r(t)
         r0 = self.r0

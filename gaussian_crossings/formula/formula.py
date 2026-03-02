@@ -1,8 +1,11 @@
-"""Formula implementation for Gaussian process level crossing statistics.
+"""Exact crossing statistics for stationary Gaussian processes.
 
-This module provides the GaussianUpCrossings class which computes exact
-mean, variance, and Fano factor for level crossings of stationary Gaussian
-processes using the Kac-Rice formulas.
+This module provides the ``GaussianUpCrossings`` class, which implements
+the exact analytical formulae for the mean (Kac-Rice), variance, and Fano
+factor of arbitrary-level upcrossings, downcrossings, and total crossings
+of smooth, stationary Gaussian processes.  The variance and Fano factor
+expressions are derived in Theorems 1 and 2 of Rawat, Morone, Heeger, and
+Martiniani (2025) and involve the error function and Owen's T function.
 """
 
 from typing import Any, Callable, Optional, Tuple, Union
@@ -18,18 +21,27 @@ torch.set_default_dtype(torch.float64)
 
 
 class GaussianUpCrossings:
-    """Compute level crossing statistics for stationary Gaussian processes.
+    """Compute exact level crossing statistics for stationary Gaussian processes.
 
-    This class computes various quantities related to upcrossings, downcrossings,
-    and crossings of a Gaussian process defined via its correlation function,
-    including mean rates, variances, and Fano factors.
+    Given a correlation function r(t), this class computes the mean number of
+    crossings (via the Kac-Rice formula), the exact variance (via the single-
+    integral formula of Theorem 1), and the Fano factor for upcrossings,
+    downcrossings, and total crossings at an arbitrary threshold level u.
+
+    The mean crossing rate depends only on the local properties r(0) and
+    r''(0), whereas the variance and Fano factor encode the full correlation
+    structure at all lag times.  A Fano factor of 1 indicates Poisson-like
+    crossings; values below 1 signal sub-Poissonian regularity (anti-bunching),
+    and values above 1 indicate super-Poissonian clustering (bunching).
 
     Attributes:
-        r_func: Correlation function of the process.
+        r_func: Correlation function r(t) of the stationary Gaussian process.
         u: Threshold level for crossings.
-        r0: Correlation function value at t=0 (variance).
-        p0: First derivative of correlation at t=0 (always 0 for stationary).
-        q0: Negative second derivative of correlation at t=0.
+        r0: Process variance, r(0).
+        p0: First derivative of the correlation at t=0 (always 0 for a
+            stationary process).
+        q0: Negative second derivative of the correlation at t=0,
+            i.e. q0 = -r''(0).
     """
 
     def __init__(
@@ -214,16 +226,20 @@ class GaussianUpCrossings:
         self,
         u: Optional[Union[float, torch.Tensor]] = None
     ) -> torch.Tensor:
-        """Compute the mean rate of upcrossings per unit time.
+        """Compute the mean rate of upcrossings per unit time (Kac-Rice formula).
 
-        The rate is given by:
-            (1 / (2*pi)) * sqrt(q0 / r0) * exp(-u^2 / (2*r0))
+        Implements the Kac-Rice formula (Rice, 1944):
+            E[N_u^+] / T = (1 / (2*pi)) * sqrt(q0 / r0) * exp(-u^2 / (2*r0))
+
+        This depends only on the local properties of the correlation function
+        at the origin (r(0) and r''(0)) and is independent of the full
+        correlation structure.
 
         Args:
-            u: The threshold level. If not provided, uses instance's u.
+            u: Threshold level. If not provided, uses the instance's u.
 
         Returns:
-            The mean rate of upcrossings per unit time.
+            The mean upcrossing rate per unit time.
         """
         if u is None:
             u = self.u
@@ -314,17 +330,19 @@ class GaussianUpCrossings:
         t: torch.Tensor,
         u: Optional[Union[float, torch.Tensor]] = None
     ) -> torch.Tensor:
-        """Compute the integrand for upcrossings variance.
+        """Compute the integrand I^+(t) for the upcrossing variance formula.
 
-        Evaluates the integral formula derived for the variance of upcrossings
-        using the auxiliary quantities alpha, beta, gamma, and delta.
+        Evaluates the closed-form integrand from Theorem 1 (Eq. 13 of the
+        paper), which is expressed in terms of the error function and Owen's
+        T function via the auxiliary quantities alpha, beta, gamma, and delta.
+        The variance is obtained by integrating this quantity over time.
 
         Args:
-            t: A tensor representing time(s) at which to evaluate the integrand.
-            u: The threshold level. If not provided, uses instance's u.
+            t: Time lag(s) at which to evaluate the integrand.
+            u: Threshold level. If not provided, uses the instance's u.
 
         Returns:
-            The value of the integrand for upcrossings variance.
+            The integrand value I^+(t) for the upcrossing variance.
         """
         if u is None:
             u = self.u
@@ -376,17 +394,19 @@ class GaussianUpCrossings:
         t: torch.Tensor,
         u: Optional[Union[float, torch.Tensor]] = None
     ) -> torch.Tensor:
-        """Compute the integrand for crossings variance.
+        """Compute the integrand I(t) for the total crossing variance formula.
 
-        Evaluates the integral formula derived for the variance of crossings
-        using the auxiliary quantities alpha, beta, gamma, and delta.
+        Evaluates the closed-form integrand from Theorem 2 (Eq. 19 of the
+        paper) for bidirectional crossings, expressed in terms of the error
+        function and Owen's T function.  The variance of total crossings is
+        obtained by integrating this quantity over time.
 
         Args:
-            t: A tensor representing time(s) at which to evaluate the integrand.
-            u: The threshold level. If not provided, uses instance's u.
+            t: Time lag(s) at which to evaluate the integrand.
+            u: Threshold level. If not provided, uses the instance's u.
 
         Returns:
-            The value of the integrand for crossings variance.
+            The integrand value I(t) for the total crossing variance.
         """
         if u is None:
             u = self.u
@@ -663,18 +683,22 @@ class GaussianUpCrossings:
         epsilon_right: float = 1e-5,
         num_points: int = 1000
     ) -> torch.Tensor:
-        """Compute the Fano factor for upcrossings (CLT formula).
+        """Compute the asymptotic Fano factor F^+ for upcrossings.
 
-        The Fano factor is variance/mean.
+        The Fano factor is the variance-to-mean ratio in the long-time
+        (T -> infinity) limit.  It is a dimensionless measure of crossing
+        regularity: F^+ = 1 for Poisson-distributed crossings, F^+ < 1
+        indicates sub-Poissonian regularity (anti-bunching), and F^+ > 1
+        indicates super-Poissonian clustering (bunching).
 
         Args:
-            u: The threshold level. If not provided, uses instance's u.
+            u: Threshold level. If not provided, uses the instance's u.
             epsilon_left: Small value to avoid singularity at left endpoint.
             epsilon_right: Small value to avoid singularity at right endpoint.
             num_points: Number of points for numerical integration.
 
         Returns:
-            The Fano factor for upcrossings.
+            The asymptotic Fano factor for upcrossings.
         """
         return self.upcrossing_variance_CLT_per_unit_time(u=u, epsilon_left=epsilon_left, epsilon_right=epsilon_right, num_points=num_points) / self.upcrossing_mean_rate(u=u)
 
@@ -707,18 +731,22 @@ class GaussianUpCrossings:
         epsilon_right: float = 1e-5,
         num_points: int = 1000
     ) -> torch.Tensor:
-        """Compute the Fano factor for crossings (CLT formula).
+        """Compute the asymptotic Fano factor F for total crossings.
 
-        The Fano factor is variance/mean.
+        The Fano factor is the variance-to-mean ratio in the long-time
+        (T -> infinity) limit.  It is a dimensionless measure of crossing
+        regularity: F = 1 for Poisson-distributed crossings, F < 1
+        indicates sub-Poissonian regularity (anti-bunching), and F > 1
+        indicates super-Poissonian clustering (bunching).
 
         Args:
-            u: The threshold level. If not provided, uses instance's u.
+            u: Threshold level. If not provided, uses the instance's u.
             epsilon_left: Small value to avoid singularity at left endpoint.
             epsilon_right: Small value to avoid singularity at right endpoint.
             num_points: Number of points for numerical integration.
 
         Returns:
-            The Fano factor for crossings.
+            The asymptotic Fano factor for total crossings.
         """
         return self.crossing_variance_CLT_per_unit_time(u=u, epsilon_left=epsilon_left, epsilon_right=epsilon_right, num_points=num_points) / self.crossing_mean_rate(u=u)
 
@@ -791,13 +819,16 @@ class GaussianUpCrossings:
     def upcrossing_integrand_mean_level(self, t: torch.Tensor) -> torch.Tensor:
         """Compute the integrand for upcrossings variance at mean level (u=0).
 
-        This formula is specifically derived for mean level crossings.
+        When the threshold equals the process mean (u=0), the general
+        formula simplifies: Owen's T function reduces to an arctangent,
+        recovering the classical result of Steinberg (1955) and
+        Leadbetter (1966).
 
         Args:
-            t: A tensor representing time(s) at which to evaluate the integrand.
+            t: Time lag(s) at which to evaluate the integrand.
 
         Returns:
-            The value of the integrand for upcrossings variance at u=0.
+            The simplified integrand value for mean-level upcrossing variance.
         """
         r = self.r(t)
         r0 = self.r0
@@ -829,15 +860,17 @@ class GaussianUpCrossings:
         return self.upcrossing_integrand_mean_level(t=t)
 
     def crossing_integrand_mean_level(self, t: torch.Tensor) -> torch.Tensor:
-        """Compute the integrand for crossings variance at mean level (u=0).
+        """Compute the integrand for total crossing variance at mean level (u=0).
 
-        This formula is specifically derived for crossings at the mean level.
+        When the threshold equals the process mean (u=0), the general
+        formula for bidirectional crossings simplifies to an expression
+        involving only arctangent terms.
 
         Args:
-            t: A tensor representing time(s) at which to evaluate the integrand.
+            t: Time lag(s) at which to evaluate the integrand.
 
         Returns:
-            The value of the integrand for crossings variance at u=0.
+            The simplified integrand value for mean-level crossing variance.
         """
         r = self.r(t)
         r0 = self.r0

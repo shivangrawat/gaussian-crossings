@@ -1,8 +1,10 @@
-"""Dynamical system models for stochastic processes.
+"""SDE-based dynamical system models for stochastic processes.
 
 This module provides classes representing stochastic dynamical systems
-that can be used for numerical simulation of Gaussian processes via
-stochastic differential equations (SDEs).
+whose sample paths can be generated via Euler-Maruyama integration.  These
+models are used for numerical validation of the exact variance and Fano
+factor formulae by comparing simulation-based crossing counts against the
+analytical predictions.
 """
 
 from typing import Optional
@@ -16,14 +18,15 @@ from gaussian_crossings.utils.utils import dynm_fun
 class filtered_OU:
     """Filtered Ornstein-Uhlenbeck process model.
 
-    This class represents an OU process that has been passed through a
-    first-order low-pass filter. The resulting system is two-dimensional.
+    This class represents an OU process x(t) that has been passed through a
+    first-order low-pass filter to produce y(t).  The resulting two-dimensional
+    system has a bi-exponential correlation function for y(t).
 
     Attributes:
-        tau_e: Effective time constant of the OU process.
-        tau_f: Filter time constant.
-        sigma: Noise strength (standard deviation).
-        dim: Dimension of the state space (always 2).
+        tau_e: Time constant of the OU process x(t).
+        tau_f: Time constant of the low-pass filter.
+        sigma: Noise strength (standard deviation of x(t)).
+        dim: Dimension of the state space (always 2: x and y).
         J: Jacobian matrix of the linearized system.
     """
 
@@ -97,16 +100,18 @@ class filtered_OU:
 
 
 class OU_noise:
-    """Process driven by Ornstein-Uhlenbeck noise.
+    """Mean-reverting process driven by Ornstein-Uhlenbeck noise (Section III.B).
 
-    This class represents a mean-reverting process where the driving
-    noise is itself an OU process. The resulting system is two-dimensional.
+    This class represents the two-dimensional system from Section III.B of
+    the paper, where a mean-reverting process y(t) is driven by an OU
+    process x(t).  The ratio kappa = tau_f / tau_e controls how filtered
+    the noise appears to the system and determines the crossing statistics.
 
     Attributes:
-        tau_e: Effective time constant of the main process.
-        tau_f: Time constant of the OU noise.
-        sigma: Noise strength (standard deviation).
-        dim: Dimension of the state space (always 2).
+        tau_e: Relaxation time constant of the mean-reverting process y(t).
+        tau_f: Correlation time of the driving OU noise x(t).
+        sigma: Noise strength (standard deviation of x(t)).
+        dim: Dimension of the state space (always 2: x and y).
         J: Jacobian matrix of the linearized system.
     """
 
@@ -180,20 +185,25 @@ class OU_noise:
 
 
 class damped_harmonic_oscillator_noise:
-    """Stochastic damped harmonic oscillator model.
+    """Stochastic damped harmonic oscillator model (Section III.A of the paper).
 
     This class represents a damped harmonic oscillator driven by thermal
-    noise, following the Langevin equation:
+    white noise, following the Langevin equation:
         d²x/dt² + 2*zeta*omega0*dx/dt + omega0²*x = sqrt(4*zeta*omega0*T)*eta(t)
 
-    where eta(t) is white noise.
+    where eta(t) is Gaussian white noise.  The noise amplitude satisfies the
+    fluctuation-dissipation theorem, ensuring a stationary variance of
+    r(0) = temp / omega0^2.  The damping ratio zeta controls whether the
+    process exhibits oscillatory (underdamped) or monotonic (overdamped)
+    correlations, which in turn determines sub- or super-Poissonian crossing
+    statistics.
 
     Attributes:
         zeta: Damping ratio (zeta < 1: underdamped, zeta = 1: critical,
             zeta > 1: overdamped).
         omega0: Natural angular frequency.
-        temp: Temperature (controls noise strength).
-        dim: Dimension of the state space (always 2).
+        temp: Temperature (noise strength, with k_B=1).
+        dim: Dimension of the state space (always 2: position and velocity).
         J: Jacobian matrix of the linearized system.
     """
 

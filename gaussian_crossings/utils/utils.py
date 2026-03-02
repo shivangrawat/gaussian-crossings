@@ -1,8 +1,10 @@
-"""Utility functions for threshold crossing analysis and SDE simulation.
+"""Utility functions for threshold crossing detection and SDE simulation.
 
 This module provides functions for counting and locating threshold crossings
-in time series, as well as utilities for Euler-Maruyama SDE integration
-and autocorrelation computation.
+(upcrossings, downcrossings, and total crossings) in discrete time series,
+Euler-Maruyama SDE integration for generating sample paths from dynamical
+system models, empirical autocorrelation estimation, and visualization
+helpers for Fano factor heatmaps.
 """
 
 from typing import Any, Callable, List, Optional, Tuple, Union
@@ -321,15 +323,18 @@ def euler_maruyama_upcrossings(
 
 
 def dynm_fun(f: Callable) -> Callable:
-    """Decorator for dynamical system functions.
+    """Decorator for dynamical system drift functions.
 
-    Wraps a method to ensure proper function signature for integration.
+    Wraps a bound method ``(self, t, x) -> dx/dt`` so that it can be
+    called as ``model._dynamical_fun(t, x)`` by the Euler-Maruyama
+    integrator without exposing the ``self`` binding.
 
     Args:
-        f: The dynamical function to wrap.
+        f: A method with signature ``(self, t, x) -> torch.Tensor``
+            representing the drift term of an SDE.
 
     Returns:
-        Wrapped function with the same signature.
+        A wrapper with signature ``(self, t, x) -> torch.Tensor``.
     """
     def wrapper(self: Any, t: Any, x: torch.Tensor) -> torch.Tensor:
         new_fun = lambda t, x: f(self, t, x)
@@ -374,14 +379,16 @@ def autocorrelation(x: Union[np.ndarray, torch.Tensor, List[float]]) -> np.ndarr
 
 
 class MidpointNormalize(mcolors.Normalize):
-    """Matplotlib normalizer with a specified midpoint.
+    """Matplotlib normalizer with a specified midpoint for diverging colormaps.
 
-    A color normalizer that maps the midpoint to 0.5 in the colormap,
-    useful for diverging colormaps where zero or another reference
-    value should be in the center.
+    A color normalizer that maps a chosen midpoint to 0.5 in the colormap,
+    producing a diverging color scale.  This is used for Fano factor heatmaps
+    where the Poisson reference value (F=1) should appear at the center of
+    the colormap, with sub-Poissonian (F<1) and super-Poissonian (F>1) regions
+    mapped to opposite ends.
 
     Attributes:
-        midpoint: The value that maps to 0.5 in the normalized range.
+        midpoint: The data value that maps to 0.5 in the normalized range.
     """
 
     def __init__(

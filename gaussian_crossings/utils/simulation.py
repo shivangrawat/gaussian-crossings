@@ -1,8 +1,10 @@
-"""Simulation methods for Gaussian stochastic processes.
+"""Simulation methods for stationary Gaussian stochastic processes.
 
-This module provides functions for simulating sample paths from stationary
-Gaussian processes using either FFT-based (circulant embedding) or
-Cholesky factorization approaches.
+This module provides functions for generating sample paths from stationary
+Gaussian processes using either FFT-based circulant embedding (O(N log N))
+or Cholesky factorization (O(N^3)).  These simulations are used for
+numerical validation of the exact variance and Fano factor formulae by
+comparing empirical crossing counts against the analytical predictions.
 """
 
 from typing import Any, Callable, Tuple

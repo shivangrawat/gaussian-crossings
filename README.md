@@ -8,8 +8,6 @@
 
 Code accompanying **[Exact Variance and Fano Factor for Arbitrary Level Crossings in Stationary Gaussian Processes](https://arxiv.org/abs/2605.25278)**, by Shivang Rawat, Flaviano Morone, David J. Heeger, and Stefano Martiniani.
 
-The explanations and figure workflow below follow the revised manuscript dated **27 September 2026**. The public arXiv link provides the preprint.
-
 ![Mean crossing rate, variance rate, and Fano factor of a damped harmonic oscillator as threshold and damping vary.](docs/assets/sdho_phase.png)
 
 *Figure 2: the mean rate is independent of damping, while the variance and Fano factor reveal changes in temporal organization. White in the Fano panel marks one.*

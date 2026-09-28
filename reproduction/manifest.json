@@ -1,0 +1,91 @@
+{
+  "release": "pre-revision-2026-09-27",
+  "archive": "pre_revision_data.zip",
+  "files": {
+    "pre_figures_20260927/arrays.npz": {
+      "bytes": 2539029,
+      "sha256": "05fbc99caf3bbfe908409972d534b8dce1a5e7b8c75a82bde3b2dfa3ac9ceae8"
+    },
+    "pre_figures_20260927/comparisons.json": {
+      "bytes": 2371,
+      "sha256": "4d07829dc6ada0e8763bd0ea76d2ba9e3dc76a8cce60847e4215a20f14bed733"
+    },
+    "pre_figures_20260927/validation.json": {
+      "bytes": 802,
+      "sha256": "2126442cd8d24f5afa86211029e478869a719ce9a70ab4bdee9f429f90c4bca2"
+    },
+    "pre_figures_20260927/run.json": {
+      "bytes": 2263,
+      "sha256": "56043d74977bb1ca16720d3c0d89bad551acec7baee98b3cec9d98e9ab0e2b9b"
+    },
+    "pre_figures_20260927/run_source.py": {
+      "bytes": 31469,
+      "sha256": "abd38b4732bf1d12cce4a2da9b6ac9a188a25163a4eff0e84757eb67a94964bd"
+    },
+    "pre_figures_20260927/render.json": {
+      "bytes": 284,
+      "sha256": "0c2d0984e3b78851a3d32a9d572b9d292301ae7b944a90012184bbe0ebf57bfc"
+    },
+    "pre_figure3_10000/counts_0.npz": {
+      "bytes": 805731,
+      "sha256": "47b49a7c4fc01c96599d332d25e2697199d231f587b1d77a453b8065be97f1ff"
+    },
+    "pre_figure3_10000/counts_1.npz": {
+      "bytes": 807103,
+      "sha256": "662ebbbd81aab5d6b58391a2510eb19415c21458c744f09da4d8e7d9985136c1"
+    },
+    "pre_figure3_10000/counts_2.npz": {
+      "bytes": 808231,
+      "sha256": "548f60fd21bfda4c1f87e597c467c5d587c7c092af1b86bfd387a58ddd8d9bbb"
+    },
+    "pre_figure3_10000/counts_3.npz": {
+      "bytes": 809536,
+      "sha256": "66ffa27008ac3406f411e7ad38c8a04abef5ce370df177960b01174f70e9e708"
+    },
+    "pre_figure3_10000/counts_4.npz": {
+      "bytes": 811114,
+      "sha256": "c79bf735f0cb6e9e8e5ea5cf3c5f20c95704990b0bfde2596f9c32baf715f548"
+    },
+    "pre_figure3_10000/run.json": {
+      "bytes": 1062,
+      "sha256": "c2fc67afd3c1b3478ea8c298d6076882c9c6f3e074a127c1929e2717235b4e7d"
+    },
+    "pre_figure3_10000/run_source.py": {
+      "bytes": 24826,
+      "sha256": "4f1dc834f0e43a8ff4409818b59dbf5560614e4bb700c14611dfd74bd7b04d76"
+    },
+    "pre_figure3_10000/summary.json": {
+      "bytes": 80047,
+      "sha256": "bf9c32fc17b8f663dc3ce61c6ad0e9841efae3212b9d432047510867234e4109"
+    }
+  },
+  "archive_sha256": "3d87c5f7b3abeb7fdd358e3bf2ed81b185611c2d00f736b69d761498654d1661",
+  "source_equivalence": [
+    {
+      "current": "examples/pre_figures.py",
+      "current_sha256": "40078d5ba7b28a794faf46e2e34de160b3a913a0e067b5b5e8866565ea628588",
+      "archived": "pre_figures_20260927/run_source.py",
+      "archived_sha256": "abd38b4732bf1d12cce4a2da9b6ac9a188a25163a4eff0e84757eb67a94964bd",
+      "changed_definitions": [
+        "comparison",
+        "fano_norm",
+        "main",
+        "plot",
+        "style",
+        "verify_archive"
+      ],
+      "numerical_definitions_identical": true
+    },
+    {
+      "current": "examples/damped_harmonic_oscillator/pre_figure3.py",
+      "current_sha256": "29afa744906f6b87dfb0888ab5c903db953600896400cdf9954f1a63e7217d5f",
+      "archived": "pre_figure3_10000/run_source.py",
+      "archived_sha256": "4f1dc834f0e43a8ff4409818b59dbf5560614e4bb700c14611dfd74bd7b04d76",
+      "changed_definitions": [
+        "main",
+        "plot"
+      ],
+      "numerical_definitions_identical": true
+    }
+  ]
+}

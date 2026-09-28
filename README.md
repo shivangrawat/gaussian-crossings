@@ -139,13 +139,26 @@ The theory assumes a nondegenerate stationary Gaussian process with sufficiently
 
 ## Reproduce the paper
 
-Start with [`examples/PRE_regenerated_figures.ipynb`](examples/PRE_regenerated_figures.ipynb), or run the commands below. It uses [`examples/pre_figures.py`](examples/pre_figures.py) for all six main figures and the supplemental integration-region schematic.
+Start with [`examples/PRE_regenerated_figures.ipynb`](examples/PRE_regenerated_figures.ipynb), or run the commands below. It uses [`examples/pre_figures.py`](examples/pre_figures.py) for the numerical figures (Figures 2–6), and also exports alternative illustrations for Figure 1 and Supplemental Figure S1. The submitted revision retains the original illustrations.
 
 The runner uses stable conditional covariances, adaptive quadrature, explicit tail checks, and independent positive Gaussian integrals. It preserves the signed error-function argument. It checks the package's integrands against those independent calculations.
 
+### Published revision data
+
+The tagged release [`pre-revision-2026-09-27`](https://github.com/shivangrawat/gaussian-crossings/tree/pre-revision-2026-09-27) contains a
+[checksum-verified archive](reproduction/README.md) of the arrays and crossing counts used in Figures 2–6. To reproduce those figures without rerunning the simulation:
+
+```bash
+uv run python examples/restore_pre_archive.py
+uv run python examples/pre_figures.py plot \
+  --output data/pre_figures_20260927 --figures figures/publication
+```
+
+For a new calculation instead, follow the steps below.
+
 ### 1. Generate the Figure 3 simulation archive
 
-A fresh clone does not contain the generated `data/` archives. Generate the 10,000-trial ensemble at each of the five damping ratios, then analyze it:
+To create a new ensemble, use a fresh output directory. The following commands use `data/pre_figure3_10000`; do not run them over a restored manuscript archive. Generate 10,000 trials at each damping ratio, then analyze them:
 
 ```bash
 uv run python examples/damped_harmonic_oscillator/pre_figure3.py validate

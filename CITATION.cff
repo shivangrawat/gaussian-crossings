@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the accompanying paper."
+title: "Gaussian Crossings"
+type: software
+version: 0.1.0
+license: MIT
+repository-code: "https://github.com/shivangrawat/gaussian-crossings"
+authors:
+  - family-names: Rawat
+    given-names: Shivang
+preferred-citation:
+  type: article
+  title: "Exact Variance and Fano Factor for Arbitrary Level Crossings in Stationary Gaussian Processes"
+  authors:
+    - family-names: Rawat
+      given-names: Shivang
+    - family-names: Morone
+      given-names: Flaviano
+    - family-names: Heeger
+      given-names: David J.
+    - family-names: Martiniani
+      given-names: Stefano
+  year: 2026
+  doi: "10.48550/arXiv.2605.25278"
+  url: "https://arxiv.org/abs/2605.25278"

@@ -1,8 +1,23 @@
-"""Gaussian Crossings: exact variance and Fano factor for level crossings.
+"""Level-crossing statistics for smooth stationary Gaussian processes.
 
-This package provides exact analytical expressions for the variance and
-Fano factor of arbitrary level crossings in smooth, stationary Gaussian
-processes. It implements the formulae from Rawat, Morone, Heeger, and
-Martiniani (2025), along with correlation functions, dynamical system
-models, and simulation utilities for numerical validation.
+The analytical formulas are from Rawat, Morone, Heeger, and Martiniani,
+*Exact Variance and Fano Factor for Arbitrary Level Crossings in Stationary
+Gaussian Processes* (2026). Importing the package does not change PyTorch's
+process-wide default dtype. Internal quadrature uses double precision.
 """
+
+from .formula import (
+    GaussianUpCrossings,
+    GaussianUpCrossingsDimless,
+    GaussianUpCrossingsDimless_minimal,
+    NumericalIntegrationWarning,
+)
+
+__version__ = "0.1.0"
+
+__all__ = [
+    "GaussianUpCrossings",
+    "GaussianUpCrossingsDimless",
+    "GaussianUpCrossingsDimless_minimal",
+    "NumericalIntegrationWarning",
+]

@@ -1,0 +1,1879 @@
+{
+  "description": "Compatibility snapshots of the pre-refactor package; these are not independent accuracy references. Paper-reference tests are separate.",
+  "git_commit": "294b0017a62654f4af102f4be1c67c69d2d18bc1",
+  "torch": "2.10.0",
+  "cases": [
+    {
+      "class": "GaussianUpCrossings",
+      "correlation": "r_damped_harmonic_oscillator_noise",
+      "parameters": {
+        "zeta": 0.5,
+        "temp": 1.0,
+        "omega0": 1.0
+      },
+      "u": -0.7,
+      "integration_options": {},
+      "expected": {
+        "r0": 1.0,
+        "q0": 0.9999999999999999,
+        "mean_rate": 0.12457129624165272,
+        "integrand": [
+          -0.01097153506822918,
+          -0.010856572516595166,
+          -0.010396660585357955,
+          -0.0034468277585384087
+        ],
+        "variance": 0.6862075652919074,
+        "variance_rate": 0.05830098689764247,
+        "total_integrand": [
+          -0.002845938195635188,
+          -0.0031507559851367967,
+          -0.0010906382808462053,
+          -0.004316189691020385
+        ],
+        "total_variance": 2.377429220807345,
+        "total_variance_rate": 0.2331883975024527,
+        "fano": 0.46801300666042567
+      }
+    },
+    {
+      "class": "GaussianUpCrossings",
+      "correlation": "r_damped_harmonic_oscillator_noise",
+      "parameters": {
+        "zeta": 0.5,
+        "temp": 1.0,
+        "omega0": 1.0
+      },
+      "u": 0.0,
+      "integration_options": {},
+      "expected": {
+        "r0": 1.0,
+        "q0": 0.9999999999999999,
+        "mean_rate": 0.15915494309189532,
+        "integrand": [
+          -0.019464510589121742,
+          -0.019131836344312876,
+          -0.018063984630040577,
+          -0.0037806570352445987
+        ],
+        "variance": 0.6860174941922226,
+        "variance_rate": 0.053881816483052486,
+        "total_integrand": [
+          -0.027193710750905237,
+          -0.030504069070322812,
+          -0.028574351451425284,
+          0.0014994932315071235
+        ],
+        "total_variance": 2.243195246645855,
+        "total_variance_rate": 0.21550740206607982,
+        "fano": 0.3385494376504623
+      }
+    },
+    {
+      "class": "GaussianUpCrossings",
+      "correlation": "r_damped_harmonic_oscillator_noise",
+      "parameters": {
+        "zeta": 0.5,
+        "temp": 1.0,
+        "omega0": 1.0
+      },
+      "u": 0.7,
+      "integration_options": {},
+      "expected": {
+        "r0": 1.0,
+        "q0": 0.9999999999999999,
+        "mean_rate": 0.12457129624165272,
+        "integrand": [
+          -0.01097153506822918,
+          -0.010856572516595166,
+          -0.010396660585357955,
+          -0.0034468277585384087
+        ],
+        "variance": 0.6862075652919074,
+        "variance_rate": 0.05830098689764247,
+        "total_integrand": [
+          -0.002845938195635188,
+          -0.0031507559851367967,
+          -0.0010906382808462053,
+          -0.004316189691020385
+        ],
+        "total_variance": 2.377429220807345,
+        "total_variance_rate": 0.2331883975024527,
+        "fano": 0.46801300666042567
+      }
+    },
+    {
+      "class": "GaussianUpCrossings",
+      "correlation": "r_damped_harmonic_oscillator_noise",
+      "parameters": {
+        "zeta": 0.5,
+        "temp": 1.0,
+        "omega0": 1.0
+      },
+      "u": 2.0,
+      "integration_options": {},
+      "expected": {
+        "r0": 1.0,
+        "q0": 0.9999999999999999,
+        "mean_rate": 0.021539279301848627,
+        "integrand": [
+          0.00026897242620129054,
+          0.00014143040619329526,
+          -4.5842036481432607e-05,
+          -0.0002739089823252223
+        ],
+        "variance": 0.20506614087705893,
+        "variance_rate": 0.0200594376502802,
+        "total_integrand": [
+          0.009879107293147048,
+          0.012416628963667487,
+          0.011600546661580695,
+          -0.0009283436101651542
+        ],
+        "total_variance": 0.7757621977204052,
+        "total_variance_rate": 0.08023505871994849,
+        "fano": 0.9312956747145473
+      }
+    },
+    {
+      "class": "GaussianUpCrossings",
+      "correlation": "r_damped_harmonic_oscillator_noise",
+      "parameters": {
+        "zeta": 1.0,
+        "temp": 1.0,
+        "omega0": 1.0
+      },
+      "u": -0.7,
+      "integration_options": {},
+      "expected": {
+        "r0": 1.0,
+        "q0": 1.0,
+        "mean_rate": 0.12457129624165275,
+        "integrand": [
+          -0.006269766638192934,
+          -0.005674637443148372,
+          -0.004492560922194818,
+          -0.000775949064575095
+        ],
+        "variance": 1.0241408986852356,
+        "variance_rate": 0.09797608062154016,
+        "total_integrand": [
+          0.05162881649044586,
+          0.039078920884656074,
+          0.024400960142014996,
+          0.002777812366361737
+        ],
+        "total_variance": 3.7298015343545416,
+        "total_variance_rate": 0.39190174795902527,
+        "fano": 0.7865060698371381
+      }
+    },
+    {
+      "class": "GaussianUpCrossings",
+      "correlation": "r_damped_harmonic_oscillator_noise",
+      "parameters": {
+        "zeta": 1.0,
+        "temp": 1.0,
+        "omega0": 1.0
+      },
+      "u": 0.0,
+      "integration_options": {},
+      "expected": {
+        "r0": 1.0,
+        "q0": 1.0,
+        "mean_rate": 0.15915494309189535,
+        "integrand": [
+          -0.013456247254019952,
+          -0.012494922826930871,
+          -0.01045860033149352,
+          -0.0022067783304303597
+        ],
+        "variance": 1.0590768141263138,
+        "variance_rate": 0.09425682163240344,
+        "total_integrand": [
+          0.04257515505457024,
+          0.02524533337589152,
+          0.009184604397131715,
+          3.408800713301796e-05
+        ],
+        "total_variance": 3.73643431489375,
+        "total_variance_rate": 0.3770240005166806,
+        "fano": 0.5922330767821643
+      }
+    },
+    {
+      "class": "GaussianUpCrossings",
+      "correlation": "r_damped_harmonic_oscillator_noise",
+      "parameters": {
+        "zeta": 1.0,
+        "temp": 1.0,
+        "omega0": 1.0
+      },
+      "u": 0.7,
+      "integration_options": {},
+      "expected": {
+        "r0": 1.0,
+        "q0": 1.0,
+        "mean_rate": 0.12457129624165275,
+        "integrand": [
+          -0.006269766638192934,
+          -0.005674637443148372,
+          -0.004492560922194818,
+          -0.000775949064575095
+        ],
+        "variance": 1.0241408986852356,
+        "variance_rate": 0.09797608062154016,
+        "total_integrand": [
+          0.05162881649044586,
+          0.039078920884656074,
+          0.024400960142014996,
+          0.002777812366361737
+        ],
+        "total_variance": 3.7298015343545416,
+        "total_variance_rate": 0.39190174795902527,
+        "fano": 0.7865060698371381
+      }
+    },
+    {
+      "class": "GaussianUpCrossings",
+      "correlation": "r_damped_harmonic_oscillator_noise",
+      "parameters": {
+        "zeta": 1.0,
+        "temp": 1.0,
+        "omega0": 1.0
+      },
+      "u": 2.0,
+      "integration_options": {},
+      "expected": {
+        "r0": 1.0,
+        "q0": 1.0,
+        "mean_rate": 0.021539279301848634,
+        "integrand": [
+          0.0010797551235451233,
+          0.00100662343106551,
+          0.0008286421592004929,
+          0.00012242779853144364
+        ],
+        "variance": 0.2548629659285102,
+        "variance_rate": 0.026234951752100923,
+        "total_integrand": [
+          0.019129452080274785,
+          0.018059226236472912,
+          0.01262141179835091,
+          0.0007905046522059414
+        ],
+        "total_variance": 0.9749853189551339,
+        "total_variance_rate": 0.10493935869576024,
+        "fano": 1.2180050866348753
+      }
+    },
+    {
+      "class": "GaussianUpCrossings",
+      "correlation": "r_damped_harmonic_oscillator_noise",
+      "parameters": {
+        "zeta": 2.0,
+        "temp": 1.0,
+        "omega0": 1.0
+      },
+      "u": -0.7,
+      "integration_options": {},
+      "expected": {
+        "r0": 0.9999999999999999,
+        "q0": 1.0000000000000009,
+        "mean_rate": 0.1245712962416528,
+        "integrand": [
+          0.003435147078137201,
+          0.005205216150441793,
+          0.006051067778265768,
+          0.00238397853363825
+        ],
+        "variance": 1.5832919604880544,
+        "variance_rate": 0.17595945470689353,
+        "total_integrand": [
+          0.15143901030629675,
+          0.10218212738002234,
+          0.0576070134552773,
+          0.013511377517701872
+        ],
+        "total_variance": 5.980967012588112,
+        "total_variance_rate": 0.7038335289657909,
+        "fano": 1.4125200589191438
+      }
+    },
+    {
+      "class": "GaussianUpCrossings",
+      "correlation": "r_damped_harmonic_oscillator_noise",
+      "parameters": {
+        "zeta": 2.0,
+        "temp": 1.0,
+        "omega0": 1.0
+      },
+      "u": 0.0,
+      "integration_options": {},
+      "expected": {
+        "r0": 0.9999999999999999,
+        "q0": 1.0000000000000009,
+        "mean_rate": 0.15915494309189543,
+        "integrand": [
+          -0.0010549864303368815,
+          0.001427096671200393,
+          0.0030165158244968918,
+          0.000314381690041856
+        ],
+        "variance": 1.690753614394056,
+        "variance_rate": 0.16871716555765004,
+        "total_integrand": [
+          0.17038510004183766,
+          0.1078120576152456,
+          0.05388595768238838,
+          0.006506613043592804
+        ],
+        "total_variance": 6.286504976694335,
+        "total_variance_rate": 0.6748631846694311,
+        "fano": 1.060081215700812
+      }
+    },
+    {
+      "class": "GaussianUpCrossings",
+      "correlation": "r_damped_harmonic_oscillator_noise",
+      "parameters": {
+        "zeta": 2.0,
+        "temp": 1.0,
+        "omega0": 1.0
+      },
+      "u": 0.7,
+      "integration_options": {},
+      "expected": {
+        "r0": 0.9999999999999999,
+        "q0": 1.0000000000000009,
+        "mean_rate": 0.1245712962416528,
+        "integrand": [
+          0.003435147078137201,
+          0.005205216150441793,
+          0.006051067778265768,
+          0.00238397853363825
+        ],
+        "variance": 1.5832919604880544,
+        "variance_rate": 0.17595945470689353,
+        "total_integrand": [
+          0.15143901030629675,
+          0.10218212738002234,
+          0.0576070134552773,
+          0.013511377517701872
+        ],
+        "total_variance": 5.980967012588112,
+        "total_variance_rate": 0.7038335289657909,
+        "fano": 1.4125200589191438
+      }
+    },
+    {
+      "class": "GaussianUpCrossings",
+      "correlation": "r_damped_harmonic_oscillator_noise",
+      "parameters": {
+        "zeta": 2.0,
+        "temp": 1.0,
+        "omega0": 1.0
+      },
+      "u": 2.0,
+      "integration_options": {},
+      "expected": {
+        "r0": 0.9999999999999999,
+        "q0": 1.0000000000000009,
+        "mean_rate": 0.02153927930184863,
+        "integrand": [
+          0.0027552791521096567,
+          0.0028583199034783622,
+          0.0025822063021175594,
+          0.0008998402849738612
+        ],
+        "variance": 0.361386685976805,
+        "variance_rate": 0.04254136024058244,
+        "total_integrand": [
+          0.03610535830362414,
+          0.027186051438605002,
+          0.016701876554713335,
+          0.004074056609175343
+        ],
+        "total_variance": 1.4015723896090062,
+        "total_variance_rate": 0.17016469605602863,
+        "fano": 1.975059594353804
+      }
+    },
+    {
+      "class": "GaussianUpCrossings",
+      "correlation": "r_OU_noise",
+      "parameters": {
+        "sigma": 1.0,
+        "tau": 0.7,
+        "kappa": 0.3
+      },
+      "u": -0.7,
+      "integration_options": {},
+      "expected": {
+        "r0": 0.23076923076923075,
+        "q0": 1.5698587127158556,
+        "mean_rate": 0.14357720321224496,
+        "integrand": [
+          0.012632374789935563,
+          0.013283023614602762,
+          0.008959213206402025,
+          0.00016002740057520504
+        ],
+        "variance": 1.7844762131236414,
+        "variance_rate": 0.18211787031528473,
+        "total_integrand": [
+          0.30213178546097563,
+          0.18657519158762864,
+          0.0692278778955179,
+          0.0008268815906112975
+        ],
+        "total_variance": 7.0033553606071095,
+        "total_variance_rate": 0.7284718745014,
+        "fano": 1.2684316607425936
+      }
+    },
+    {
+      "class": "GaussianUpCrossings",
+      "correlation": "r_OU_noise",
+      "parameters": {
+        "sigma": 1.0,
+        "tau": 0.7,
+        "kappa": 0.3
+      },
+      "u": 0.0,
+      "integration_options": {},
+      "expected": {
+        "r0": 0.23076923076923075,
+        "q0": 1.5698587127158556,
+        "mean_rate": 0.41510834509467665,
+        "integrand": [
+          -0.0714615178076208,
+          -0.05146986126664352,
+          -0.024562114273876196,
+          -0.00038170701244027994
+        ],
+        "variance": 2.932131506130522,
+        "variance_rate": 0.28307114910832754,
+        "total_integrand": [
+          0.3592471440507936,
+          0.12561841273053354,
+          0.02027824303774428,
+          3.7496388253233093e-06
+        ],
+        "total_variance": 11.228523336969058,
+        "total_variance_rate": 1.1322859838218775,
+        "fano": 0.6819211236135605
+      }
+    },
+    {
+      "class": "GaussianUpCrossings",
+      "correlation": "r_OU_noise",
+      "parameters": {
+        "sigma": 1.0,
+        "tau": 0.7,
+        "kappa": 0.3
+      },
+      "u": 0.7,
+      "integration_options": {},
+      "expected": {
+        "r0": 0.23076923076923075,
+        "q0": 1.5698587127158556,
+        "mean_rate": 0.14357720321224496,
+        "integrand": [
+          0.012632374789935563,
+          0.013283023614602762,
+          0.008959213206402025,
+          0.00016002740057520504
+        ],
+        "variance": 1.7844762131236414,
+        "variance_rate": 0.18211787031528473,
+        "total_integrand": [
+          0.30213178546097563,
+          0.18657519158762864,
+          0.0692278778955179,
+          0.0008268815906112975
+        ],
+        "total_variance": 7.0033553606071095,
+        "total_variance_rate": 0.7284718745014,
+        "fano": 1.2684316607425936
+      }
+    },
+    {
+      "class": "GaussianUpCrossings",
+      "correlation": "r_OU_noise",
+      "parameters": {
+        "sigma": 1.0,
+        "tau": 0.7,
+        "kappa": 0.3
+      },
+      "u": 2.0,
+      "integration_options": {},
+      "expected": {
+        "r0": 0.23076923076923075,
+        "q0": 1.5698587127158556,
+        "mean_rate": 7.149504674381453e-05,
+        "integrand": [
+          1.1731745947545852e-05,
+          3.7614004156089536e-06,
+          2.8766074872095573e-07,
+          4.2025319244885705e-10
+        ],
+        "variance": 0.0008011284070398669,
+        "variance_rate": 8.033869368910922e-05,
+        "total_integrand": [
+          0.0002613494603202039,
+          7.78283422354084e-05,
+          2.2994211935860185e-06,
+          1.7342456586493088e-09
+        ],
+        "total_variance": 0.003173147016192402,
+        "total_variance_rate": 0.00032135466157073476,
+        "fano": 1.1236959390625172
+      }
+    },
+    {
+      "class": "GaussianUpCrossings",
+      "correlation": "r_filtered_OU",
+      "parameters": {
+        "sigma": 1.2,
+        "tau": 0.7,
+        "kappa": 0.3
+      },
+      "u": -0.7,
+      "integration_options": {},
+      "expected": {
+        "r0": 1.1076923076923075,
+        "q0": 7.535321821036106,
+        "mean_rate": 0.3327392010547326,
+        "integrand": [
+          -0.030679249389061636,
+          -0.01798648932103729,
+          -0.0050367107813772405,
+          -1.6008129214428735e-05
+        ],
+        "variance": 2.9659959071026294,
+        "variance_rate": 0.29476183352238794,
+        "total_integrand": [
+          0.40829469982162214,
+          0.2045940834180413,
+          0.07170131809275337,
+          0.0009234678779904137
+        ],
+        "total_variance": 11.485970783904493,
+        "total_variance_rate": 1.179044478715722,
+        "fano": 0.88586446258222
+      }
+    },
+    {
+      "class": "GaussianUpCrossings",
+      "correlation": "r_filtered_OU",
+      "parameters": {
+        "sigma": 1.2,
+        "tau": 0.7,
+        "kappa": 0.3
+      },
+      "u": 0.0,
+      "integration_options": {},
+      "expected": {
+        "r0": 1.1076923076923075,
+        "q0": 7.535321821036106,
+        "mean_rate": 0.41510834509467665,
+        "integrand": [
+          -0.07146151780762454,
+          -0.051469861266643574,
+          -0.02456211427387625,
+          -0.00038170701244027994
+        ],
+        "variance": 2.932144888697948,
+        "variance_rate": 0.28307262145475687,
+        "total_integrand": [
+          0.3592471440507916,
+          0.12561841273053365,
+          0.02027824303774428,
+          3.749638825212287e-06
+        ],
+        "total_variance": 11.228532344749478,
+        "total_variance_rate": 1.1322869757799656,
+        "fano": 0.6819246705102846
+      }
+    },
+    {
+      "class": "GaussianUpCrossings",
+      "correlation": "r_filtered_OU",
+      "parameters": {
+        "sigma": 1.2,
+        "tau": 0.7,
+        "kappa": 0.3
+      },
+      "u": 0.7,
+      "integration_options": {},
+      "expected": {
+        "r0": 1.1076923076923075,
+        "q0": 7.535321821036106,
+        "mean_rate": 0.3327392010547326,
+        "integrand": [
+          -0.030679249389061636,
+          -0.01798648932103729,
+          -0.0050367107813772405,
+          -1.6008129214428735e-05
+        ],
+        "variance": 2.9659959071026294,
+        "variance_rate": 0.29476183352238794,
+        "total_integrand": [
+          0.40829469982162214,
+          0.2045940834180413,
+          0.07170131809275337,
+          0.0009234678779904137
+        ],
+        "total_variance": 11.485970783904493,
+        "total_variance_rate": 1.179044478715722,
+        "fano": 0.88586446258222
+      }
+    },
+    {
+      "class": "GaussianUpCrossings",
+      "correlation": "r_filtered_OU",
+      "parameters": {
+        "sigma": 1.2,
+        "tau": 0.7,
+        "kappa": 0.3
+      },
+      "u": 2.0,
+      "integration_options": {},
+      "expected": {
+        "r0": 1.1076923076923075,
+        "q0": 7.535321821036106,
+        "mean_rate": 0.06823679961464911,
+        "integrand": [
+          0.010621675166968655,
+          0.009254628164199578,
+          0.004924272017657625,
+          6.89765047883293e-05
+        ],
+        "variance": 0.900134775216237,
+        "variance_rate": 0.09194099889792261,
+        "total_integrand": [
+          0.1712929893242642,
+          0.10441354149715182,
+          0.03279096657276219,
+          0.00031868050171950796
+        ],
+        "total_variance": 3.5447830405317475,
+        "total_variance_rate": 0.36776334858174214,
+        "fano": 1.3473814630395513
+      }
+    },
+    {
+      "class": "GaussianUpCrossings",
+      "correlation": "r_rational_quadratic",
+      "parameters": {
+        "sigma": 1.2,
+        "tau": 0.7,
+        "alpha": 0.75
+      },
+      "u": -0.7,
+      "integration_options": {},
+      "expected": {
+        "r0": 1.44,
+        "q0": 2.9387755102040822,
+        "mean_rate": 0.19179254011731484,
+        "integrand": [
+          -0.03676914853268604,
+          -0.03424405617232307,
+          -0.015466541959924564,
+          0.0006693394665063176
+        ],
+        "variance": 1.2609197350623695,
+        "variance_rate": 0.14039963334811517,
+        "total_integrand": [
+          -0.08680781704449525,
+          0.02546371833750291,
+          0.0340951188949393,
+          0.0050950481452611
+        ],
+        "total_variance": 4.646131067638603,
+        "total_variance_rate": 0.5615795776089418,
+        "fano": 0.7320390733770777
+      }
+    },
+    {
+      "class": "GaussianUpCrossings",
+      "correlation": "r_rational_quadratic",
+      "parameters": {
+        "sigma": 1.2,
+        "tau": 0.7,
+        "alpha": 0.75
+      },
+      "u": 0.0,
+      "integration_options": {},
+      "expected": {
+        "r0": 1.44,
+        "q0": 2.9387755102040822,
+        "mean_rate": 0.2273642044169934,
+        "integrand": [
+          -0.05167589891015078,
+          -0.04857453986112965,
+          -0.024799676254930885,
+          -0.0005993477410638146
+        ],
+        "variance": 1.1727862011720063,
+        "variance_rate": 0.10682517624180347,
+        "total_integrand": [
+          -0.13903060905115447,
+          -0.009622579777226054,
+          0.015111286822429959,
+          0.0008469671190327044
+        ],
+        "total_variance": 4.198887787145823,
+        "total_variance_rate": 0.42727823987428465,
+        "fano": 0.4698416644595585
+      }
+    },
+    {
+      "class": "GaussianUpCrossings",
+      "correlation": "r_rational_quadratic",
+      "parameters": {
+        "sigma": 1.2,
+        "tau": 0.7,
+        "alpha": 0.75
+      },
+      "u": 0.7,
+      "integration_options": {},
+      "expected": {
+        "r0": 1.44,
+        "q0": 2.9387755102040822,
+        "mean_rate": 0.19179254011731484,
+        "integrand": [
+          -0.03676914853268604,
+          -0.03424405617232307,
+          -0.015466541959924564,
+          0.0006693394665063176
+        ],
+        "variance": 1.2609197350623695,
+        "variance_rate": 0.14039963334811517,
+        "total_integrand": [
+          -0.08680781704449525,
+          0.02546371833750291,
+          0.0340951188949393,
+          0.0050950481452611
+        ],
+        "total_variance": 4.646131067638603,
+        "total_variance_rate": 0.5615795776089418,
+        "fano": 0.7320390733770777
+      }
+    },
+    {
+      "class": "GaussianUpCrossings",
+      "correlation": "r_rational_quadratic",
+      "parameters": {
+        "sigma": 1.2,
+        "tau": 0.7,
+        "alpha": 0.75
+      },
+      "u": 2.0,
+      "integration_options": {},
+      "expected": {
+        "r0": 1.44,
+        "q0": 2.9387755102040822,
+        "mean_rate": 0.05669376656826999,
+        "integrand": [
+          -0.00321052101664131,
+          -0.0026313879592097062,
+          0.0008203802731882215,
+          0.0008341917734914629
+        ],
+        "variance": 0.6140086861545084,
+        "variance_rate": 0.0769966799953489,
+        "total_integrand": [
+          0.011666358746125453,
+          0.05000895145514957,
+          0.029224932949755512,
+          0.0036287129752295855
+        ],
+        "total_variance": 2.36548222921219,
+        "total_variance_rate": 0.3079811049433655,
+        "fano": 1.3581154447134918
+      }
+    },
+    {
+      "class": "GaussianUpCrossings",
+      "correlation": "r_squared_exp",
+      "parameters": {
+        "sigma": 1.2,
+        "tau": 0.7
+      },
+      "u": -0.7,
+      "integration_options": {},
+      "expected": {
+        "r0": 1.44,
+        "q0": 2.9387755102040813,
+        "mean_rate": 0.19179254011731478,
+        "integrand": [
+          -0.036783843944787176,
+          -0.03664974460468181,
+          -0.03217502403003375,
+          -1.474667465570234e-07
+        ],
+        "variance": 0.8691266632915136,
+        "variance_rate": 0.07710855143266455,
+        "total_integrand": [
+          -0.12430540098321616,
+          -0.0597476987730375,
+          0.016029554458266232,
+          4.065224545879431e-09
+        ],
+        "total_variance": 3.0732806704259574,
+        "total_variance_rate": 0.3084153143856848,
+        "fano": 0.4020414526315734
+      }
+    },
+    {
+      "class": "GaussianUpCrossings",
+      "correlation": "r_squared_exp",
+      "parameters": {
+        "sigma": 1.2,
+        "tau": 0.7
+      },
+      "u": 0.0,
+      "integration_options": {},
+      "expected": {
+        "r0": 1.44,
+        "q0": 2.9387755102040813,
+        "mean_rate": 0.22736420441699334,
+        "integrand": [
+          -0.05169379133526021,
+          -0.05151981761457239,
+          -0.04555694464316892,
+          -2.086686912150526e-07
+        ],
+        "variance": 0.7895667224979805,
+        "variance_rate": 0.06500677840286279,
+        "total_integrand": [
+          -0.1836144944816576,
+          -0.1161058595202416,
+          -0.013343332864203195,
+          6.388500839449307e-13
+        ],
+        "total_variance": 2.658063388048343,
+        "total_variance_rate": 0.2600047250944681,
+        "fano": 0.2859147444495627
+      }
+    },
+    {
+      "class": "GaussianUpCrossings",
+      "correlation": "r_squared_exp",
+      "parameters": {
+        "sigma": 1.2,
+        "tau": 0.7
+      },
+      "u": 0.7,
+      "integration_options": {},
+      "expected": {
+        "r0": 1.44,
+        "q0": 2.9387755102040813,
+        "mean_rate": 0.19179254011731478,
+        "integrand": [
+          -0.036783843944787176,
+          -0.03664974460468181,
+          -0.03217502403003375,
+          -1.474667465570234e-07
+        ],
+        "variance": 0.8691266632915136,
+        "variance_rate": 0.07710855143266455,
+        "total_integrand": [
+          -0.12430540098321616,
+          -0.0597476987730375,
+          0.016029554458266232,
+          4.065224545879431e-09
+        ],
+        "total_variance": 3.0732806704259574,
+        "total_variance_rate": 0.3084153143856848,
+        "fano": 0.4020414526315734
+      }
+    },
+    {
+      "class": "GaussianUpCrossings",
+      "correlation": "r_squared_exp",
+      "parameters": {
+        "sigma": 1.2,
+        "tau": 0.7
+      },
+      "u": 2.0,
+      "integration_options": {},
+      "expected": {
+        "r0": 1.44,
+        "q0": 2.9387755102040813,
+        "mean_rate": 0.05669376656826998,
+        "integrand": [
+          -0.0032140974613964063,
+          -0.0031933210489370764,
+          -0.00262142173676774,
+          -1.2249451522127613e-08
+        ],
+        "variance": 0.4804670462132296,
+        "variance_rate": 0.04727508541220581,
+        "total_integrand": [
+          0.000815215861719237,
+          0.0334800082881487,
+          0.029419797577212282,
+          2.899432976696814e-09
+        ],
+        "total_variance": 1.8308044612103087,
+        "total_variance_rate": 0.18909474559615774,
+        "fano": 0.83386742976898
+      }
+    },
+    {
+      "class": "GaussianUpCrossingsDimless",
+      "correlation": "r_OU_noise",
+      "parameters": {
+        "sigma": 1.0,
+        "tau": 0.7,
+        "kappa": 0.3
+      },
+      "u": -0.7,
+      "integration_options": {},
+      "expected": {
+        "r0": 0.23076923076923075,
+        "q0": 0.7692307692307694,
+        "mean_rate": 0.14357720321224496,
+        "integrand": [
+          0.006069758766492506,
+          0.006560535256149334,
+          0.005666175299629962,
+          0.00042967085778293154
+        ],
+        "variance": 1.784505687246738,
+        "variance_rate": 0.18212106332535904,
+        "total_integrand": [
+          0.15439059042550937,
+          0.11161936024008245,
+          0.055359324896656,
+          0.0022727220175571064
+        ],
+        "total_variance": 7.003400338961993,
+        "total_variance_rate": 0.7284221487734616,
+        "fano": 1.2684538997192756
+      }
+    },
+    {
+      "class": "GaussianUpCrossingsDimless",
+      "correlation": "r_OU_noise",
+      "parameters": {
+        "sigma": 1.0,
+        "tau": 0.7,
+        "kappa": 0.3
+      },
+      "u": 0.0,
+      "integration_options": {},
+      "expected": {
+        "r0": 0.23076923076923075,
+        "q0": 0.7692307692307694,
+        "mean_rate": 0.41510834509467665,
+        "integrand": [
+          -0.036099806591711206,
+          -0.028891749276591563,
+          -0.017596569649735452,
+          -0.0010276787491134282
+        ],
+        "variance": 2.9322166771425238,
+        "variance_rate": 0.2830803731068194,
+        "total_integrand": [
+          0.19808795315906613,
+          0.09173452198629822,
+          0.024186316054749968,
+          5.665724359876778e-05
+        ],
+        "total_variance": 11.228652202670569,
+        "total_variance_rate": 1.1321420720359745,
+        "fano": 0.6819433443147362
+      }
+    },
+    {
+      "class": "GaussianUpCrossingsDimless",
+      "correlation": "r_OU_noise",
+      "parameters": {
+        "sigma": 1.0,
+        "tau": 0.7,
+        "kappa": 0.3
+      },
+      "u": 0.7,
+      "integration_options": {},
+      "expected": {
+        "r0": 0.23076923076923075,
+        "q0": 0.7692307692307694,
+        "mean_rate": 0.14357720321224496,
+        "integrand": [
+          0.006069758766492506,
+          0.006560535256149334,
+          0.005666175299629962,
+          0.00042967085778293154
+        ],
+        "variance": 1.784505687246738,
+        "variance_rate": 0.18212106332535904,
+        "total_integrand": [
+          0.15439059042550937,
+          0.11161936024008245,
+          0.055359324896656,
+          0.0022727220175571064
+        ],
+        "total_variance": 7.003400338961993,
+        "total_variance_rate": 0.7284221487734616,
+        "fano": 1.2684538997192756
+      }
+    },
+    {
+      "class": "GaussianUpCrossingsDimless",
+      "correlation": "r_OU_noise",
+      "parameters": {
+        "sigma": 1.0,
+        "tau": 0.7,
+        "kappa": 0.3
+      },
+      "u": 2.0,
+      "integration_options": {},
+      "expected": {
+        "r0": 0.23076923076923075,
+        "q0": 0.7692307692307694,
+        "mean_rate": 7.149504674381453e-05,
+        "integrand": [
+          6.342886045349148e-06,
+          2.9915369278205126e-06,
+          5.041737124994957e-07,
+          1.3371126249149457e-09
+        ],
+        "variance": 0.0008011430546996776,
+        "variance_rate": 8.034028011204277e-05,
+        "total_integrand": [
+          0.00012907436761879315,
+          7.160866055130069e-05,
+          6.2798782764850926e-06,
+          5.623558577683504e-09
+        ],
+        "total_variance": 0.0031731705283101984,
+        "total_variance_rate": 0.0003213300353508921,
+        "fano": 1.1237181283330442
+      }
+    },
+    {
+      "class": "GaussianUpCrossingsDimless",
+      "correlation": "r_filtered_OU",
+      "parameters": {
+        "sigma": 1.2,
+        "tau": 0.7,
+        "kappa": 0.3
+      },
+      "u": -0.7,
+      "integration_options": {},
+      "expected": {
+        "r0": 1.1076923076923075,
+        "q0": 3.6923076923076925,
+        "mean_rate": 0.3327392010547326,
+        "integrand": [
+          -0.015774573731055314,
+          -0.011030438176763205,
+          -0.004780678793337698,
+          -5.5098585014547174e-05
+        ],
+        "variance": 2.965985451093125,
+        "variance_rate": 0.29476077219400126,
+        "total_integrand": [
+          0.2170916606920434,
+          0.12924415451467736,
+          0.057468327139367115,
+          0.0025173360088998065
+        ],
+        "total_variance": 11.486019654619115,
+        "total_variance_rate": 1.1789283529881889,
+        "fano": 0.8858612729118016
+      }
+    },
+    {
+      "class": "GaussianUpCrossingsDimless",
+      "correlation": "r_filtered_OU",
+      "parameters": {
+        "sigma": 1.2,
+        "tau": 0.7,
+        "kappa": 0.3
+      },
+      "u": 0.0,
+      "integration_options": {},
+      "expected": {
+        "r0": 1.1076923076923075,
+        "q0": 3.6923076923076925,
+        "mean_rate": 0.41510834509467665,
+        "integrand": [
+          -0.03609980659171148,
+          -0.028891749276591536,
+          -0.017596569649735397,
+          -0.0010276787491134143
+        ],
+        "variance": 2.9321318281404505,
+        "variance_rate": 0.28307129453197133,
+        "total_integrand": [
+          0.19808795315906463,
+          0.09173452198629806,
+          0.024186316054750023,
+          5.6657243598878804e-05
+        ],
+        "total_variance": 11.228593040587159,
+        "total_variance_rate": 1.1321420684579615,
+        "fano": 0.6819214739405187
+      }
+    },
+    {
+      "class": "GaussianUpCrossingsDimless",
+      "correlation": "r_filtered_OU",
+      "parameters": {
+        "sigma": 1.2,
+        "tau": 0.7,
+        "kappa": 0.3
+      },
+      "u": 0.7,
+      "integration_options": {},
+      "expected": {
+        "r0": 1.1076923076923075,
+        "q0": 3.6923076923076925,
+        "mean_rate": 0.3327392010547326,
+        "integrand": [
+          -0.015774573731055314,
+          -0.011030438176763205,
+          -0.004780678793337698,
+          -5.5098585014547174e-05
+        ],
+        "variance": 2.965985451093125,
+        "variance_rate": 0.29476077219400126,
+        "total_integrand": [
+          0.2170916606920434,
+          0.12924415451467736,
+          0.057468327139367115,
+          0.0025173360088998065
+        ],
+        "total_variance": 11.486019654619115,
+        "total_variance_rate": 1.1789283529881889,
+        "fano": 0.8858612729118016
+      }
+    },
+    {
+      "class": "GaussianUpCrossingsDimless",
+      "correlation": "r_filtered_OU",
+      "parameters": {
+        "sigma": 1.2,
+        "tau": 0.7,
+        "kappa": 0.3
+      },
+      "u": 2.0,
+      "integration_options": {},
+      "expected": {
+        "r0": 1.1076923076923075,
+        "q0": 3.6923076923076925,
+        "mean_rate": 0.06823679961464911,
+        "integrand": [
+          0.0052267339795633114,
+          0.004885312963048912,
+          0.003449661161382475,
+          0.00018860774253685528
+        ],
+        "variance": 0.9001326356275228,
+        "variance_rate": 0.09194078212200063,
+        "total_integrand": [
+          0.08657149940361451,
+          0.06384944844839155,
+          0.028495169926708096,
+          0.000888974221203518
+        ],
+        "total_variance": 3.5447933263997116,
+        "total_variance_rate": 0.3677395662506451,
+        "fano": 1.3473782862211308
+      }
+    },
+    {
+      "class": "GaussianUpCrossingsDimless",
+      "correlation": "r_rational_quadratic",
+      "parameters": {
+        "sigma": 1.2,
+        "tau": 0.7,
+        "alpha": 0.75
+      },
+      "u": -0.7,
+      "integration_options": {},
+      "expected": {
+        "r0": 1.44,
+        "q0": 1.4400000000000002,
+        "mean_rate": 0.19179254011731478,
+        "integrand": [
+          -0.01802252466584387,
+          -0.017650738480727925,
+          -0.01240624343554916,
+          0.00013149145873582804
+        ],
+        "variance": 1.2609279854884097,
+        "variance_rate": 0.14083345984798973,
+        "total_integrand": [
+          -0.051110962145463984,
+          -0.002137934245406037,
+          0.020892648019359222,
+          0.004262937872264477
+        ],
+        "total_variance": 4.646146666538145,
+        "total_variance_rate": 0.5632921901644976,
+        "fano": 0.734301030487658
+      }
+    },
+    {
+      "class": "GaussianUpCrossingsDimless",
+      "correlation": "r_rational_quadratic",
+      "parameters": {
+        "sigma": 1.2,
+        "tau": 0.7,
+        "alpha": 0.75
+      },
+      "u": 0.0,
+      "integration_options": {},
+      "expected": {
+        "r0": 1.44,
+        "q0": 1.4400000000000002,
+        "mean_rate": 0.22736420441699334,
+        "integrand": [
+          -0.0253280748504083,
+          -0.02487303607913995,
+          -0.018345533244227594,
+          -0.0009649248505831445
+        ],
+        "variance": 1.1727966641303604,
+        "variance_rate": 0.10682598291992228,
+        "total_integrand": [
+          -0.0777665574715129,
+          -0.022161541176120514,
+          0.00857067249938244,
+          0.0010326568467049074
+        ],
+        "total_variance": 4.198908942153145,
+        "total_variance_rate": 0.4272559334927727,
+        "fano": 0.46984521241523136
+      }
+    },
+    {
+      "class": "GaussianUpCrossingsDimless",
+      "correlation": "r_rational_quadratic",
+      "parameters": {
+        "sigma": 1.2,
+        "tau": 0.7,
+        "alpha": 0.75
+      },
+      "u": 0.7,
+      "integration_options": {},
+      "expected": {
+        "r0": 1.44,
+        "q0": 1.4400000000000002,
+        "mean_rate": 0.19179254011731478,
+        "integrand": [
+          -0.01802252466584387,
+          -0.017650738480727925,
+          -0.01240624343554916,
+          0.00013149145873582804
+        ],
+        "variance": 1.2609279854884097,
+        "variance_rate": 0.14083345984798973,
+        "total_integrand": [
+          -0.051110962145463984,
+          -0.002137934245406037,
+          0.020892648019359222,
+          0.004262937872264477
+        ],
+        "total_variance": 4.646146666538145,
+        "total_variance_rate": 0.5632921901644976,
+        "fano": 0.734301030487658
+      }
+    },
+    {
+      "class": "GaussianUpCrossingsDimless",
+      "correlation": "r_rational_quadratic",
+      "parameters": {
+        "sigma": 1.2,
+        "tau": 0.7,
+        "alpha": 0.75
+      },
+      "u": 2.0,
+      "integration_options": {},
+      "expected": {
+        "r0": 1.44,
+        "q0": 1.4400000000000002,
+        "mean_rate": 0.05669376656826998,
+        "integrand": [
+          -0.0015745111894081803,
+          -0.0014870772092046894,
+          -0.00039401516359909147,
+          0.0006323472620933992
+        ],
+        "variance": 0.6140108728339304,
+        "variance_rate": 0.07730584307315713,
+        "total_integrand": [
+          0.002260754724697528,
+          0.020759841504076483,
+          0.020989253118204244,
+          0.0030636163929785923
+        ],
+        "total_variance": 2.3654859182995125,
+        "total_variance_rate": 0.3092105711512922,
+        "fano": 1.3635686558250866
+      }
+    },
+    {
+      "class": "GaussianUpCrossingsDimless",
+      "correlation": "r_squared_exp",
+      "parameters": {
+        "sigma": 1.2,
+        "tau": 0.7
+      },
+      "u": -0.7,
+      "integration_options": {},
+      "expected": {
+        "r0": 1.44,
+        "q0": 1.44,
+        "mean_rate": 0.19179254011731478,
+        "integrand": [
+          -0.018024282522246797,
+          -0.018008361459332576,
+          -0.017431882954806695,
+          -0.0001402360025348319
+        ],
+        "variance": 0.8691354438381748,
+        "variance_rate": 0.07710923294915185,
+        "total_integrand": [
+          -0.06425410604570496,
+          -0.04139102074488031,
+          -0.004698666561460035,
+          9.059132846170326e-06
+        ],
+        "total_variance": 3.0732983458745555,
+        "total_variance_rate": 0.30839649527204954,
+        "fano": 0.40204500603613713
+      }
+    },
+    {
+      "class": "GaussianUpCrossingsDimless",
+      "correlation": "r_squared_exp",
+      "parameters": {
+        "sigma": 1.2,
+        "tau": 0.7
+      },
+      "u": 0.0,
+      "integration_options": {},
+      "expected": {
+        "r0": 1.44,
+        "q0": 1.44,
+        "mean_rate": 0.22736420441699334,
+        "integrand": [
+          -0.025330214690792247,
+          -0.02530961333010919,
+          -0.02455359713872645,
+          -0.0001999380386273411
+        ],
+        "variance": 0.7895771254175978,
+        "variance_rate": 0.06500758532543002,
+        "total_integrand": [
+          -0.09336976791995633,
+          -0.06985711757131802,
+          -0.02755359088927764,
+          1.1060184852557109e-06
+        ],
+        "total_variance": 2.658084290863574,
+        "total_variance_rate": 0.25998241019505175,
+        "fano": 0.28591829348037556
+      }
+    },
+    {
+      "class": "GaussianUpCrossingsDimless",
+      "correlation": "r_squared_exp",
+      "parameters": {
+        "sigma": 1.2,
+        "tau": 0.7
+      },
+      "u": 0.7,
+      "integration_options": {},
+      "expected": {
+        "r0": 1.44,
+        "q0": 1.44,
+        "mean_rate": 0.19179254011731478,
+        "integrand": [
+          -0.018024282522246797,
+          -0.018008361459332576,
+          -0.017431882954806695,
+          -0.0001402360025348319
+        ],
+        "variance": 0.8691354438381748,
+        "variance_rate": 0.07710923294915185,
+        "total_integrand": [
+          -0.06425410604570496,
+          -0.04139102074488031,
+          -0.004698666561460035,
+          9.059132846170326e-06
+        ],
+        "total_variance": 3.0732983458745555,
+        "total_variance_rate": 0.30839649527204954,
+        "fano": 0.40204500603613713
+      }
+    },
+    {
+      "class": "GaussianUpCrossingsDimless",
+      "correlation": "r_squared_exp",
+      "parameters": {
+        "sigma": 1.2,
+        "tau": 0.7
+      },
+      "u": 2.0,
+      "integration_options": {},
+      "expected": {
+        "r0": 1.44,
+        "q0": 1.44,
+        "mean_rate": 0.05669376656826998,
+        "integrand": [
+          -0.001574939651999922,
+          -0.0015724264219881658,
+          -0.0014897706415057665,
+          -1.0979702252444067e-05
+        ],
+        "variance": 0.4804696482943008,
+        "variance_rate": 0.047275287765397245,
+        "total_integrand": [
+          -0.0015844945967297339,
+          0.011110768084033235,
+          0.02064441224685741,
+          5.971681967214051e-06
+        ],
+        "total_variance": 1.8308097592429848,
+        "total_variance_rate": 0.1890891895073161,
+        "fano": 0.8338709990007258
+      }
+    },
+    {
+      "class": "GaussianUpCrossingsDimless_minimal",
+      "correlation": "r_OU_noise",
+      "parameters": {
+        "sigma": 1.0,
+        "tau": 0.7,
+        "kappa": 0.3
+      },
+      "u": -0.7,
+      "integration_options": {
+        "epsilon_left": 0.01,
+        "num_points": 1000
+      },
+      "expected": {
+        "r0": 0.23076923076923075,
+        "q0": 0.7692307692307694,
+        "mean_rate": 0.14357720321224496,
+        "integrand": [
+          0.006069758766492506,
+          0.006560535256149334,
+          0.005666175299629962,
+          0.00042967085778293154
+        ],
+        "variance": 1.7799565709355893,
+        "variance_rate": 0.18166600475216033
+      }
+    },
+    {
+      "class": "GaussianUpCrossingsDimless_minimal",
+      "correlation": "r_OU_noise",
+      "parameters": {
+        "sigma": 1.0,
+        "tau": 0.7,
+        "kappa": 0.3
+      },
+      "u": 0.0,
+      "integration_options": {
+        "epsilon_left": 0.01,
+        "num_points": 1000
+      },
+      "expected": {
+        "r0": 0.23076923076923075,
+        "q0": 0.7692307692307694,
+        "mean_rate": 0.41510834509467665,
+        "integrand": [
+          -0.036099806591711206,
+          -0.028891749276591563,
+          -0.017596569649735452,
+          -0.0010276787491134282
+        ],
+        "variance": 2.9191997915883148,
+        "variance_rate": 0.28177889805919565
+      }
+    },
+    {
+      "class": "GaussianUpCrossingsDimless_minimal",
+      "correlation": "r_OU_noise",
+      "parameters": {
+        "sigma": 1.0,
+        "tau": 0.7,
+        "kappa": 0.3
+      },
+      "u": 0.7,
+      "integration_options": {
+        "epsilon_left": 0.01,
+        "num_points": 1000
+      },
+      "expected": {
+        "r0": 0.23076923076923075,
+        "q0": 0.7692307692307694,
+        "mean_rate": 0.14357720321224496,
+        "integrand": [
+          0.006069758766492506,
+          0.006560535256149334,
+          0.005666175299629962,
+          0.00042967085778293154
+        ],
+        "variance": 1.7799565709355893,
+        "variance_rate": 0.18166600475216033
+      }
+    },
+    {
+      "class": "GaussianUpCrossingsDimless_minimal",
+      "correlation": "r_OU_noise",
+      "parameters": {
+        "sigma": 1.0,
+        "tau": 0.7,
+        "kappa": 0.3
+      },
+      "u": 2.0,
+      "integration_options": {
+        "epsilon_left": 0.01,
+        "num_points": 1000
+      },
+      "expected": {
+        "r0": 0.23076923076923075,
+        "q0": 0.7692307692307694,
+        "mean_rate": 7.149504674381453e-05,
+        "integrand": [
+          6.342886045349148e-06,
+          2.9915369278205126e-06,
+          5.041737124994957e-07,
+          1.3371126249149457e-09
+        ],
+        "variance": 0.0007516584040062662,
+        "variance_rate": 7.543881171618726e-05
+      }
+    },
+    {
+      "class": "GaussianUpCrossingsDimless_minimal",
+      "correlation": "r_filtered_OU",
+      "parameters": {
+        "sigma": 1.2,
+        "tau": 0.7,
+        "kappa": 0.3
+      },
+      "u": -0.7,
+      "integration_options": {
+        "epsilon_left": 0.01,
+        "num_points": 1000
+      },
+      "expected": {
+        "r0": 1.1076923076923075,
+        "q0": 3.6923076923076925,
+        "mean_rate": 0.3327392010547326,
+        "integrand": [
+          -0.015774573731055314,
+          -0.011030438176763205,
+          -0.004780678793337698,
+          -5.5098585014547174e-05
+        ],
+        "variance": 2.9555867949583243,
+        "variance_rate": 0.29372140410027964
+      }
+    },
+    {
+      "class": "GaussianUpCrossingsDimless_minimal",
+      "correlation": "r_filtered_OU",
+      "parameters": {
+        "sigma": 1.2,
+        "tau": 0.7,
+        "kappa": 0.3
+      },
+      "u": 0.0,
+      "integration_options": {
+        "epsilon_left": 0.01,
+        "num_points": 1000
+      },
+      "expected": {
+        "r0": 1.1076923076923075,
+        "q0": 3.6923076923076925,
+        "mean_rate": 0.41510834509467665,
+        "integrand": [
+          -0.03609980659171148,
+          -0.028891749276591536,
+          -0.017596569649735397,
+          -0.0010276787491134143
+        ],
+        "variance": 2.919199791588066,
+        "variance_rate": 0.281778898059148
+      }
+    },
+    {
+      "class": "GaussianUpCrossingsDimless_minimal",
+      "correlation": "r_filtered_OU",
+      "parameters": {
+        "sigma": 1.2,
+        "tau": 0.7,
+        "kappa": 0.3
+      },
+      "u": 0.7,
+      "integration_options": {
+        "epsilon_left": 0.01,
+        "num_points": 1000
+      },
+      "expected": {
+        "r0": 1.1076923076923075,
+        "q0": 3.6923076923076925,
+        "mean_rate": 0.3327392010547326,
+        "integrand": [
+          -0.015774573731055314,
+          -0.011030438176763205,
+          -0.004780678793337698,
+          -5.5098585014547174e-05
+        ],
+        "variance": 2.9555867949583243,
+        "variance_rate": 0.29372140410027964
+      }
+    },
+    {
+      "class": "GaussianUpCrossingsDimless_minimal",
+      "correlation": "r_filtered_OU",
+      "parameters": {
+        "sigma": 1.2,
+        "tau": 0.7,
+        "kappa": 0.3
+      },
+      "u": 2.0,
+      "integration_options": {
+        "epsilon_left": 0.01,
+        "num_points": 1000
+      },
+      "expected": {
+        "r0": 1.1076923076923075,
+        "q0": 3.6923076923076925,
+        "mean_rate": 0.06823679961464911,
+        "integrand": [
+          0.0052267339795633114,
+          0.004885312963048912,
+          0.003449661161382475,
+          0.00018860774253685528
+        ],
+        "variance": 0.8979794156796217,
+        "variance_rate": 0.09172545511725268
+      }
+    },
+    {
+      "class": "GaussianUpCrossingsDimless_minimal",
+      "correlation": "r_rational_quadratic",
+      "parameters": {
+        "sigma": 1.2,
+        "tau": 0.7,
+        "alpha": 0.75
+      },
+      "u": -0.7,
+      "integration_options": {
+        "epsilon_left": 0.01,
+        "num_points": 1000
+      },
+      "expected": {
+        "r0": 1.44,
+        "q0": 1.4400000000000002,
+        "mean_rate": 0.19179254011731478,
+        "integrand": [
+          -0.01802252466584387,
+          -0.017650738480727925,
+          -0.01240624343554916,
+          0.00013149145873582804
+        ],
+        "variance": 1.2608771665858265,
+        "variance_rate": 0.1334041880065303
+      }
+    },
+    {
+      "class": "GaussianUpCrossingsDimless_minimal",
+      "correlation": "r_rational_quadratic",
+      "parameters": {
+        "sigma": 1.2,
+        "tau": 0.7,
+        "alpha": 0.75
+      },
+      "u": 0.0,
+      "integration_options": {
+        "epsilon_left": 0.01,
+        "num_points": 1000
+      },
+      "expected": {
+        "r0": 1.44,
+        "q0": 1.4400000000000002,
+        "mean_rate": 0.22736420441699334,
+        "integrand": [
+          -0.0253280748504083,
+          -0.02487303607913995,
+          -0.018345533244227594,
+          -0.0009649248505831445
+        ],
+        "variance": 1.172755657546324,
+        "variance_rate": 0.10682029209150998
+      }
+    },
+    {
+      "class": "GaussianUpCrossingsDimless_minimal",
+      "correlation": "r_rational_quadratic",
+      "parameters": {
+        "sigma": 1.2,
+        "tau": 0.7,
+        "alpha": 0.75
+      },
+      "u": 0.7,
+      "integration_options": {
+        "epsilon_left": 0.01,
+        "num_points": 1000
+      },
+      "expected": {
+        "r0": 1.44,
+        "q0": 1.4400000000000002,
+        "mean_rate": 0.19179254011731478,
+        "integrand": [
+          -0.01802252466584387,
+          -0.017650738480727925,
+          -0.01240624343554916,
+          0.00013149145873582804
+        ],
+        "variance": 1.2608771665858265,
+        "variance_rate": 0.1334041880065303
+      }
+    },
+    {
+      "class": "GaussianUpCrossingsDimless_minimal",
+      "correlation": "r_rational_quadratic",
+      "parameters": {
+        "sigma": 1.2,
+        "tau": 0.7,
+        "alpha": 0.75
+      },
+      "u": 2.0,
+      "integration_options": {
+        "epsilon_left": 0.01,
+        "num_points": 1000
+      },
+      "expected": {
+        "r0": 1.44,
+        "q0": 1.4400000000000002,
+        "mean_rate": 0.05669376656826998,
+        "integrand": [
+          -0.0015745111894081803,
+          -0.0014870772092046894,
+          -0.00039401516359909147,
+          0.0006323472620933992
+        ],
+        "variance": 0.6139823255654582,
+        "variance_rate": 0.07200654981121471
+      }
+    },
+    {
+      "class": "GaussianUpCrossingsDimless_minimal",
+      "correlation": "r_squared_exp",
+      "parameters": {
+        "sigma": 1.2,
+        "tau": 0.7
+      },
+      "u": -0.7,
+      "integration_options": {
+        "epsilon_left": 0.01,
+        "num_points": 1000
+      },
+      "expected": {
+        "r0": 1.44,
+        "q0": 1.44,
+        "mean_rate": 0.19179254011731478,
+        "integrand": [
+          -0.018024282522246797,
+          -0.018008361459332576,
+          -0.017431882954806695,
+          -0.0001402360025348319
+        ],
+        "variance": 0.8690921104501602,
+        "variance_rate": 0.07710442821477326
+      }
+    },
+    {
+      "class": "GaussianUpCrossingsDimless_minimal",
+      "correlation": "r_squared_exp",
+      "parameters": {
+        "sigma": 1.2,
+        "tau": 0.7
+      },
+      "u": 0.0,
+      "integration_options": {
+        "epsilon_left": 0.01,
+        "num_points": 1000
+      },
+      "expected": {
+        "r0": 1.44,
+        "q0": 1.44,
+        "mean_rate": 0.22736420441699334,
+        "integrand": [
+          -0.025330214690792247,
+          -0.02530961333010919,
+          -0.02455359713872645,
+          -0.0001999380386273411
+        ],
+        "variance": 0.7895365366818619,
+        "variance_rate": 0.0650030031229619
+      }
+    },
+    {
+      "class": "GaussianUpCrossingsDimless_minimal",
+      "correlation": "r_squared_exp",
+      "parameters": {
+        "sigma": 1.2,
+        "tau": 0.7
+      },
+      "u": 0.7,
+      "integration_options": {
+        "epsilon_left": 0.01,
+        "num_points": 1000
+      },
+      "expected": {
+        "r0": 1.44,
+        "q0": 1.44,
+        "mean_rate": 0.19179254011731478,
+        "integrand": [
+          -0.018024282522246797,
+          -0.018008361459332576,
+          -0.017431882954806695,
+          -0.0001402360025348319
+        ],
+        "variance": 0.8690921104501602,
+        "variance_rate": 0.07710442821477326
+      }
+    },
+    {
+      "class": "GaussianUpCrossingsDimless_minimal",
+      "correlation": "r_squared_exp",
+      "parameters": {
+        "sigma": 1.2,
+        "tau": 0.7
+      },
+      "u": 2.0,
+      "integration_options": {
+        "epsilon_left": 0.01,
+        "num_points": 1000
+      },
+      "expected": {
+        "r0": 1.44,
+        "q0": 1.44,
+        "mean_rate": 0.05669376656826998,
+        "integrand": [
+          -0.001574939651999922,
+          -0.0015724264219881658,
+          -0.0014897706415057665,
+          -1.0979702252444067e-05
+        ],
+        "variance": 0.48044748113215435,
+        "variance_rate": 0.04727288307289074
+      }
+    }
+  ]
+}

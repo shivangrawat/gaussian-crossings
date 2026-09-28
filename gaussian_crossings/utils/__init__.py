@@ -1,11 +1,35 @@
-"""Utility functions for simulation, crossing detection, and special functions.
+"""Simulation, crossing detection, covariance estimation, and special functions."""
 
-This subpackage provides tools for simulating Gaussian process sample paths
-(via FFT circulant embedding or Cholesky factorization), detecting threshold
-crossings in time series, Euler-Maruyama SDE integration, and a differentiable
-implementation of Owen's T function used in the exact variance expressions.
-"""
+from .owensT import OwensT, owensT
+from .simulation import simulate_gaussian_process_cholesky, simulate_gaussian_process_fft
+from .utils import (
+    MidpointNormalize,
+    autocorrelation,
+    count_crossings,
+    count_downcrossings,
+    count_upcrossings,
+    crossing_times,
+    downcrossing_times,
+    dynm_fun,
+    euler_maruyama_sde,
+    euler_maruyama_upcrossings,
+    upcrossing_times,
+)
 
-from .simulation import simulate_gaussian_process_fft, simulate_gaussian_process_cholesky
-from .utils import *
-from .owensT import OwensT
+__all__ = [
+    "OwensT",
+    "owensT",
+    "simulate_gaussian_process_cholesky",
+    "simulate_gaussian_process_fft",
+    "MidpointNormalize",
+    "autocorrelation",
+    "count_crossings",
+    "count_downcrossings",
+    "count_upcrossings",
+    "crossing_times",
+    "downcrossing_times",
+    "dynm_fun",
+    "euler_maruyama_sde",
+    "euler_maruyama_upcrossings",
+    "upcrossing_times",
+]

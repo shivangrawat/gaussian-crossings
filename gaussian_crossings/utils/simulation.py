@@ -1,16 +1,40 @@
-"""Simulation methods for stationary Gaussian stochastic processes.
+"""Stationary Gaussian paths on the grid ``arange(round(T / dt)) * dt``.
 
-This module provides functions for generating sample paths from stationary
-Gaussian processes using either FFT-based circulant embedding (O(N log N))
-or Cholesky factorization (O(N^3)).  These simulations are used for
-numerical validation of the exact variance and Fano factor formulae by
-comparing empirical crossing counts against the analytical predictions.
+FFT sampling uses a positive semidefinite circulant embedding. Cholesky
+sampling constructs the finite Toeplitz covariance directly. Both use
+PyTorch's random generator; call ``torch.manual_seed`` for repeatable paths.
 """
 
-from typing import Any, Callable, Tuple
+import math
+from typing import Any, Callable
 
 import torch
-from scipy.linalg import toeplitz
+
+
+def _time_grid(T: float, dt: float) -> torch.Tensor:
+    if not math.isfinite(T) or not math.isfinite(dt) or T <= 0 or dt <= 0:
+        raise ValueError("T and dt must be finite and positive")
+    n = round(T / dt)
+    if n < 2:
+        raise ValueError("T / dt must give at least two sample points")
+    return torch.arange(n, dtype=torch.float64) * dt
+
+
+def _covariance_row(r_func, t, args, kwargs):
+    """Evaluate a vectorized covariance, falling back to scalar callbacks."""
+    try:
+        values = torch.as_tensor(r_func(t, *args, **kwargs), dtype=t.dtype)
+        if values.shape != t.shape:
+            raise ValueError("Covariance callback returned the wrong shape")
+    except (TypeError, ValueError, RuntimeError):
+        values = torch.stack(
+            [torch.as_tensor(r_func(float(lag), *args, **kwargs), dtype=t.dtype) for lag in t]
+        )
+    if values.shape != t.shape or not torch.isfinite(values).all():
+        raise ValueError("Covariance must return one finite value per time lag")
+    if values[0] <= 0:
+        raise ValueError("Covariance at zero must be positive")
+    return values
 
 
 def simulate_gaussian_process_fft(
@@ -18,75 +42,34 @@ def simulate_gaussian_process_fft(
     T: float,
     dt: float,
     *args: Any,
-    **kwargs: Any
-) -> Tuple[torch.Tensor, torch.Tensor]:
-    """Simulate a stationary Gaussian process using FFT-based circulant embedding.
+    **kwargs: Any,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Sample a stationary Gaussian path with O(n log n) circulant embedding.
 
-    Generates a sample path from a zero-mean stationary Gaussian process
-    with the specified correlation function. This method is efficient for
-    long time series as it uses FFT with O(N log N) complexity.
-
-    Based on the algorithm described at:
-    https://urbain.vaes.uk/static/teaching/lectures/build/lectures-w4.pdf
-
-    Args:
-        r_func: Correlation function r(tau) of the process. Must accept
-            (tau, *args, **kwargs) and return a torch.Tensor.
-        T: Total simulation time.
-        dt: Time step for discretization.
-        *args: Additional positional arguments passed to r_func.
-        **kwargs: Additional keyword arguments passed to r_func.
-
-    Returns:
-        A tuple (t, x) where:
-            - t: Tensor of shape (n,) containing time points.
-            - x: Tensor of shape (n,) containing simulated process values.
-
-    Example:
-        >>> from gaussian_crossings.process import r_OU
-        >>> t, x = simulate_gaussian_process_fft(r_OU, T=10.0, dt=0.01, sigma=1.0, tau=1.0)
+    The endpoint T is excluded when T/dt is an integer. Covariance parameters
+    are passed through to ``r_func``. The covariance must be even and the
+    reflected embedding must be positive semidefinite. Negative eigenvalues
+    within floating-point tolerance are clipped to zero; larger violations
+    raise ValueError instead of silently changing the target covariance.
+    Increase the observation window or use Cholesky when embedding fails.
     """
-    # Basic discretization
-    n = int(round(T / dt))
-    N = 2 * n - 2
-    # Time points
-    t = torch.arange(n, dtype=torch.float64) * dt
-
-    # Build discrete correlation array: r(0..N-1)
-    try:
-        r_vals = r_func(t, *args, **kwargs)
-        if not isinstance(r_vals, torch.Tensor):
-            r_vals = torch.tensor(r_vals, dtype=torch.float64)
-        if r_vals.ndim != 1 or r_vals.shape[0] != n:
-            raise ValueError("Correlation function r did not return the expected shape.")
-    except Exception:
-        r_vals = torch.tensor(
-            [r_func(i * dt, *args, **kwargs) for i in range(N)],
-            dtype=torch.float64
+    t = _time_grid(T, dt)
+    row = _covariance_row(r_func, t, args, kwargs)
+    embedded = torch.cat((row, row.flip(0)[1:-1]))
+    n = embedded.numel()
+    eigenvalues = torch.fft.fft(embedded).real
+    tolerance = 1e-12 * float(eigenvalues.abs().max())
+    if eigenvalues.min() < -tolerance:
+        raise ValueError(
+            "Circulant embedding is not positive semidefinite; increase T "
+            "or use simulate_gaussian_process_cholesky."
         )
-
-    # r_full is [r(0), r(dt), ..., r((n-1)*dt), r((n-2)*dt), ..., r(dt)]
-    r_full = torch.cat((r_vals, torch.flip(r_vals, dims=[0])[1:-1]))
-
-    # FFT to get "eigenvalues" of the corresponding circulant covariance
-    lam = torch.fft.fft(r_full)
-
-    # Create random complex amplitudes with correct magnitude
-    Z_real = torch.randn(N, dtype=torch.float64)
-    Z_imag = torch.randn(N, dtype=torch.float64)
-    Z = Z_real + 1j * Z_imag
-
-    # Multiply by sqrt of lam / N
-    # (We do not check positivity of lam here, assuming r_full is valid.)
-    Y = torch.sqrt(lam / N) * Z
-
-    # Inverse transform to get the time-domain signal
-    V = torch.fft.fft(Y)
-
-    # Extract the real part for the first n points
-    x = torch.real(V[:n])
-
-    return t, x
+    eigenvalues = eigenvalues.clamp_min(0)
+    real = torch.randn(n, dtype=row.dtype, device=row.device)
+    imag = torch.randn(n, dtype=row.dtype, device=row.device)
+    spectrum = torch.sqrt(eigenvalues / n) * (real + 1j * imag)
+    path = torch.fft.fft(spectrum).real[: t.numel()]
+    return t.to(row.device), path
 
 
 def simulate_gaussian_process_cholesky(
@@ -96,75 +79,30 @@ def simulate_gaussian_process_cholesky(
     jitter: float = 1e-10,
     max_attempts: int = 5,
     *args: Any,
-    **kwargs: Any
-) -> Tuple[torch.Tensor, torch.Tensor]:
-    """Simulate a Gaussian process using Cholesky factorization.
+    **kwargs: Any,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Sample from the finite Toeplitz covariance in O(n^3) time/O(n^2) space.
 
-    Generates a sample path by constructing the full covariance matrix
-    and using Cholesky decomposition. This method is exact but has O(N³)
-    complexity and O(N²) memory usage, making it suitable only for
-    moderate-length time series.
-
-    Args:
-        r: Correlation function with signature r(t, *args, **kwargs).
-            Must be defined for t >= 0.
-        T: Total simulation time.
-        dt: Time discretization step.
-        jitter: Small diagonal increment added if the matrix is nearly
-            singular. Default is 1e-10.
-        max_attempts: Maximum number of times to attempt adding jitter
-            before raising an error. Default is 5.
-        *args: Additional positional arguments passed to r.
-        **kwargs: Additional keyword arguments passed to r.
-
-    Returns:
-        A tuple (t, x) where:
-            - t: Tensor of time points from 0 to T.
-            - x: Tensor of simulated process values at times in t.
-
-    Raises:
-        RuntimeError: If Cholesky decomposition fails even after adding jitter.
-
-    Example:
-        >>> from gaussian_crossings.process import r_OU
-        >>> t, x = simulate_gaussian_process_cholesky(r_OU, T=5.0, dt=0.1, sigma=1.0, tau=1.0)
+    The first factorization uses the exact covariance. Failed attempts retry
+    with diagonal jitter, beginning at ``jitter`` and increasing tenfold.
+    Jitter changes the covariance by the stated diagonal increment. The
+    time grid and callback conventions match the FFT sampler.
     """
-    # Determine number of time points
-    N = int(round(T / dt))
-    t = torch.arange(N, dtype=torch.float64) * dt
-
-    # Attempt vectorized evaluation of r
-    try:
-        first_row_vals = r(t, *args, **kwargs)
-        if not isinstance(first_row_vals, torch.Tensor):
-            first_row_vals = torch.tensor(first_row_vals, dtype=torch.float64)
-        if first_row_vals.ndim != 1 or first_row_vals.shape[0] != N:
-            raise ValueError("Correlation function r did not return the expected shape.")
-    except Exception:
-        first_row_vals = torch.tensor(
-            [r(i * dt, *args, **kwargs) for i in range(N)],
-            dtype=torch.float64
-        )
-
-    # Construct the Toeplitz covariance matrix
-    C = torch.from_numpy(toeplitz(first_row_vals.numpy()))
-
-    # Attempt Cholesky with jitter if necessary
-    attempt = 0
-    while attempt < max_attempts:
-        try:
-            L = torch.linalg.cholesky(C)
+    t = _time_grid(T, dt)
+    if not math.isfinite(jitter) or jitter < 0:
+        raise ValueError("jitter must be finite and nonnegative")
+    if not isinstance(max_attempts, int) or max_attempts < 1:
+        raise ValueError("max_attempts must be a positive integer")
+    row = _covariance_row(r, t, args, kwargs)
+    indices = torch.arange(t.numel(), device=row.device)
+    covariance = row[(indices[:, None] - indices[None, :]).abs()]
+    eye = torch.eye(t.numel(), dtype=row.dtype, device=row.device)
+    for attempt in range(max_attempts):
+        increment = 0 if attempt == 0 else jitter * 10 ** (attempt - 1)
+        factor, info = torch.linalg.cholesky_ex(covariance + increment * eye)
+        if info == 0:
             break
-        except RuntimeError:
-            # Add jitter to the diagonal
-            jitter_value = jitter * (10 ** attempt)
-            C = C + jitter_value * torch.eye(N, dtype=C.dtype)
-            attempt += 1
     else:
-        raise RuntimeError("Cholesky decomposition failed even after adding jitter.")
-
-    # Generate the sample path: x = L @ z, where z ~ N(0, I)
-    z = torch.randn(N, dtype=torch.float64)
-    x = L @ z
-
-    return t, x
+        raise RuntimeError("Cholesky decomposition failed even after adding jitter")
+    noise = torch.randn(t.numel(), dtype=row.dtype, device=row.device)
+    return t.to(row.device), factor @ noise

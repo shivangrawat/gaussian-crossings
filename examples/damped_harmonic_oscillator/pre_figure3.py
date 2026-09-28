@@ -486,6 +486,7 @@ def main():
                     'criteria': {'max_moment_abs_z': 5, 'max_paired_grid_ci_over_sampling_halfwidth': 0.25,
                                  'max_mean_grid_bias_over_sampling_halfwidth': 0.2}}
         json_write(args.output / 'run.json', metadata)
+        (args.output / 'run_source.py').write_bytes(Path(__file__).read_bytes())
         with ThreadPoolExecutor(max_workers=args.workers) as pool:
             futures = [pool.submit(simulate_one, j, args.output, args.trials, args.dt, args.seed, args.batch_size) for j in range(5)]
             for future in futures:

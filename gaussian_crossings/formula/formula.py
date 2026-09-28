@@ -4,20 +4,22 @@ This module provides the ``GaussianUpCrossings`` class, which implements
 the exact analytical formulae for the mean (Kac-Rice), variance, and Fano
 factor of arbitrary-level upcrossings, downcrossings, and total crossings
 of smooth, stationary Gaussian processes.  The variance and Fano factor
-expressions are derived in Theorems 1 and 2 of Rawat, Morone, Heeger, and
-Martiniani (2025) and involve the error function and Owen's T function.
+expressions are derived in Theorems III.1 and III.2 of Rawat, Morone, Heeger, and
+Martiniani (2026) and involve the error function and Owen's T function.
 """
 
+import math
+import warnings
 from typing import Any, Callable, Optional, Tuple, Union
 
 import torch
 from torch.func import grad
-import numpy as np
-import math
-import scipy.special
+
 from gaussian_crossings.utils.owensT import owensT
 
-torch.set_default_dtype(torch.float64)
+
+class NumericalIntegrationWarning(RuntimeWarning):
+    """The compatibility quadrature omitted nonfinite small-lag samples."""
 
 
 class GaussianUpCrossings:
@@ -25,14 +27,15 @@ class GaussianUpCrossings:
 
     Given a correlation function r(t), this class computes the mean number of
     crossings (via the Kac-Rice formula), the exact variance (via the single-
-    integral formula of Theorem 1), and the Fano factor for upcrossings,
+    integral formula of Theorem III.1), and the Fano factor for upcrossings,
     downcrossings, and total crossings at an arbitrary threshold level u.
 
     The mean crossing rate depends only on the local properties r(0) and
     r''(0), whereas the variance and Fano factor encode the full correlation
-    structure at all lag times.  A Fano factor of 1 indicates Poisson-like
-    crossings; values below 1 signal sub-Poissonian regularity (anti-bunching),
-    and values above 1 indicate super-Poissonian clustering (bunching).
+    structure at all lag times. A Fano factor of 1 means equal count variance
+    and mean, without establishing that the crossing process is Poisson.
+    Values below or above 1 indicate underdispersion or overdispersion,
+    respectively, relative to Poisson counts.
 
     Attributes:
         r_func: Correlation function r(t) of the stationary Gaussian process.
@@ -45,11 +48,7 @@ class GaussianUpCrossings:
     """
 
     def __init__(
-        self,
-        r_func: Callable[..., torch.Tensor],
-        u: float = 0,
-        *args: Any,
-        **kwargs: Any
+        self, r_func: Callable[..., torch.Tensor], u: float = 0, *args: Any, **kwargs: Any
     ) -> None:
         """Initialize the GaussianUpCrossings instance.
 
@@ -67,17 +66,24 @@ class GaussianUpCrossings:
             at t=0).
         """
         self.r_func = r_func
-        self.u = u 
+        self.u = u
         self.args = args
         self.kwargs = kwargs
 
-        # define a small constant to avoid gradient explosion
+        # Retained compatibility attribute; not a numerical clipping tolerance.
         self.eps = 1e-15
 
         # Evaluate r, its first derivative (p), and the second derivative (q) at t = 0.
         self.r0 = self.r(torch.tensor(0.0, dtype=torch.float64))
         self.p0 = torch.tensor(0.0, dtype=torch.float64)
-        self.q0 = self.q(torch.tensor(1e-40, dtype=torch.float64)) # to avoid issues with autograd at t=0
+        # Use a positive lag because abs(t) has an artificial autograd cusp at zero.
+        self.q0 = self.q(torch.tensor(1e-40, dtype=torch.float64))
+        for name, value in (("r(0)", self.r0), ("-r''(0)", self.q0)):
+            if value.numel() != 1 or not bool(torch.isfinite(value) & (value > 0)):
+                raise ValueError(
+                    f"{name} must be a finite positive scalar. Crossing formulae require "
+                    "a nondegenerate smooth process; ordinary OU noise is not smooth."
+                )
 
     def r(self, t: torch.Tensor) -> torch.Tensor:
         """Evaluate the correlation function r at the given time(s).
@@ -88,6 +94,7 @@ class GaussianUpCrossings:
         Returns:
             The correlation function evaluated at t.
         """
+        t = torch.as_tensor(t, dtype=torch.float64)
         return self.r_func(t, *self.args, **self.kwargs)
 
     def p(self, t: torch.Tensor) -> torch.Tensor:
@@ -99,8 +106,11 @@ class GaussianUpCrossings:
         Returns:
             The first derivative of r(t) evaluated at t.
         """
+        t = torch.as_tensor(t, dtype=torch.float64)
+
         def sum_func(t: torch.Tensor) -> torch.Tensor:
             return torch.sum(self.r(t))
+
         return grad(sum_func)(t)
 
     def q(self, t: torch.Tensor) -> torch.Tensor:
@@ -114,9 +124,12 @@ class GaussianUpCrossings:
         Returns:
             The negative second derivative of r(t) evaluated at t.
         """
+        t = torch.as_tensor(t, dtype=torch.float64)
+
         def sum_func(t: torch.Tensor) -> torch.Tensor:
             return torch.sum(self.p(t))
-        return - grad(sum_func)(t)
+
+        return -grad(sum_func)(t)
 
     def _alpha(self, t: torch.Tensor) -> torch.Tensor:
         """Compute the auxiliary quantity alpha(t).
@@ -153,9 +166,7 @@ class GaussianUpCrossings:
         )
 
     def _gamma(
-        self,
-        t: torch.Tensor,
-        u: Optional[Union[float, torch.Tensor]] = None
+        self, t: torch.Tensor, u: Optional[Union[float, torch.Tensor]] = None
     ) -> torch.Tensor:
         """Compute the auxiliary quantity gamma(t).
 
@@ -189,9 +200,7 @@ class GaussianUpCrossings:
         return 1.0 / (self.r(t) + self.r0)
 
     def compute_all_quantities(
-        self,
-        t: torch.Tensor,
-        u: Optional[Union[float, torch.Tensor]] = None
+        self, t: torch.Tensor, u: Optional[Union[float, torch.Tensor]] = None
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         """Compute auxiliary quantities alpha, beta, gamma, and delta at time t.
 
@@ -209,23 +218,15 @@ class GaussianUpCrossings:
         p_vals = self.p(t)
         q_vals = self.q(t)
         r0 = self.r0
-        # p0 and q0 were computed at t=0 in __init__, but are not used in the following lines.
-        alpha = torch.abs(
-            -(r_vals + r0) / (2 * (p_vals**2 + (q_vals - self.q0) * (r_vals + r0)))
-        )
-        beta = torch.abs(
-            -(r0 - r_vals) / (2 * (p_vals**2 + (q_vals + self.q0) * (r_vals - r0)))
-        )
+        alpha = torch.abs(-(r_vals + r0) / (2 * (p_vals**2 + (q_vals - self.q0) * (r_vals + r0))))
+        beta = torch.abs(-(r0 - r_vals) / (2 * (p_vals**2 + (q_vals + self.q0) * (r_vals - r0))))
         sqrt2 = torch.sqrt(torch.tensor(2.0, dtype=torch.float64))
         gamma = (sqrt2 * p_vals / (r_vals + r0)) * u
         delta = 1.0 / (r_vals + r0)
 
         return alpha, beta, gamma, delta
 
-    def upcrossing_mean_rate(
-        self,
-        u: Optional[Union[float, torch.Tensor]] = None
-    ) -> torch.Tensor:
+    def upcrossing_mean_rate(self, u: Optional[Union[float, torch.Tensor]] = None) -> torch.Tensor:
         """Compute the mean rate of upcrossings per unit time (Kac-Rice formula).
 
         Implements the Kac-Rice formula (Rice, 1944):
@@ -243,11 +244,15 @@ class GaussianUpCrossings:
         """
         if u is None:
             u = self.u
-        return (1 / (2 * torch.pi)) * torch.sqrt(self.q0 / self.r0) * torch.exp(-u**2 / (2 * self.r0))
+        return (
+            (1 / (2 * torch.pi))
+            * torch.sqrt(self.q0 / self.r0)
+            * torch.exp(-(u**2) / (2 * self.r0))
+            / self._time_scale
+        )
 
     def downcrossing_mean_rate(
-        self,
-        u: Optional[Union[float, torch.Tensor]] = None
+        self, u: Optional[Union[float, torch.Tensor]] = None
     ) -> torch.Tensor:
         """Compute the mean rate of downcrossings per unit time.
 
@@ -261,10 +266,7 @@ class GaussianUpCrossings:
         """
         return self.upcrossing_mean_rate(u=u)
 
-    def crossing_mean_rate(
-        self,
-        u: Optional[Union[float, torch.Tensor]] = None
-    ) -> torch.Tensor:
+    def crossing_mean_rate(self, u: Optional[Union[float, torch.Tensor]] = None) -> torch.Tensor:
         """Compute the mean rate of crossings per unit time.
 
         The crossings rate is twice the upcrossing rate.
@@ -278,9 +280,7 @@ class GaussianUpCrossings:
         return 2 * self.upcrossing_mean_rate(u=u)
 
     def upcrossing_mean(
-        self,
-        T: float,
-        u: Optional[Union[float, torch.Tensor]] = None
+        self, T: float, u: Optional[Union[float, torch.Tensor]] = None
     ) -> torch.Tensor:
         """Compute the expected number of upcrossings over time interval T.
 
@@ -294,9 +294,7 @@ class GaussianUpCrossings:
         return self.upcrossing_mean_rate(u=u) * T
 
     def downcrossing_mean(
-        self,
-        T: float,
-        u: Optional[Union[float, torch.Tensor]] = None
+        self, T: float, u: Optional[Union[float, torch.Tensor]] = None
     ) -> torch.Tensor:
         """Compute the expected number of downcrossings over time interval T.
 
@@ -310,9 +308,7 @@ class GaussianUpCrossings:
         return self.downcrossing_mean_rate(u=u) * T
 
     def crossing_mean(
-        self,
-        T: float,
-        u: Optional[Union[float, torch.Tensor]] = None
+        self, T: float, u: Optional[Union[float, torch.Tensor]] = None
     ) -> torch.Tensor:
         """Compute the expected number of crossings over time interval T.
 
@@ -326,13 +322,11 @@ class GaussianUpCrossings:
         return self.crossing_mean_rate(u=u) * T
 
     def upcrossing_integrand(
-        self,
-        t: torch.Tensor,
-        u: Optional[Union[float, torch.Tensor]] = None
+        self, t: torch.Tensor, u: Optional[Union[float, torch.Tensor]] = None
     ) -> torch.Tensor:
         """Compute the integrand I^+(t) for the upcrossing variance formula.
 
-        Evaluates the closed-form integrand from Theorem 1 (Eq. 13 of the
+        Evaluates the closed-form integrand from Theorem III.1 (Eq. 17 of the
         paper), which is expressed in terms of the error function and Owen's
         T function via the auxiliary quantities alpha, beta, gamma, and delta.
         The variance is obtained by integrating this quantity over time.
@@ -346,7 +340,7 @@ class GaussianUpCrossings:
         """
         if u is None:
             u = self.u
-        
+
         r = self.r(t)
         r0 = self.r0
         q0 = self.q0
@@ -358,23 +352,29 @@ class GaussianUpCrossings:
 
         final_integral = (
             torch.exp(-delta * u**2)
-            / (4 * torch.pi**2 * torch.sqrt(r0**2 - r**2))
+            / (4 * torch.pi**2 * torch.sqrt(self._determinant(r0, r)))
             * (
                 (torch.exp(-alpha * gamma**2) / (2 * torch.sqrt(alpha * beta)))
                 * (
-                    1 + math.sqrt(math.pi) * gamma * torch.sqrt(alpha + beta) * torch.exp(expr1) * torch.special.erf(erf_arg)
+                    1
+                    + math.sqrt(math.pi)
+                    * gamma
+                    * torch.sqrt(alpha + beta)
+                    * torch.exp(expr1)
+                    * torch.special.erf(erf_arg)
                 )
-                + torch.pi * ((alpha - beta - 2 * alpha * beta * gamma**2) / (alpha * beta))
-                * owensT(gamma * torch.sqrt(2 * alpha * beta / (alpha + beta)), torch.sqrt(alpha / beta))
+                + torch.pi
+                * ((alpha - beta - 2 * alpha * beta * gamma**2) / (alpha * beta))
+                * owensT(
+                    gamma * torch.sqrt(2 * alpha * beta / (alpha + beta)), torch.sqrt(alpha / beta)
+                )
             )
         ) - (1 / (4 * torch.pi**2)) * (q0 / r0) * torch.exp(-(u**2) / r0)
 
         return final_integral
-    
+
     def downcrossing_integrand(
-        self,
-        t: torch.Tensor,
-        u: Optional[Union[float, torch.Tensor]] = None
+        self, t: torch.Tensor, u: Optional[Union[float, torch.Tensor]] = None
     ) -> torch.Tensor:
         """Compute the integrand for downcrossings variance.
 
@@ -390,13 +390,11 @@ class GaussianUpCrossings:
         return self.upcrossing_integrand(t, u=u)
 
     def crossing_integrand(
-        self,
-        t: torch.Tensor,
-        u: Optional[Union[float, torch.Tensor]] = None
+        self, t: torch.Tensor, u: Optional[Union[float, torch.Tensor]] = None
     ) -> torch.Tensor:
         """Compute the integrand I(t) for the total crossing variance formula.
 
-        Evaluates the closed-form integrand from Theorem 2 (Eq. 19 of the
+        Evaluates the closed-form integrand from Theorem III.2 (Eq. 24 of the
         paper) for bidirectional crossings, expressed in terms of the error
         function and Owen's T function.  The variance of total crossings is
         obtained by integrating this quantity over time.
@@ -422,25 +420,115 @@ class GaussianUpCrossings:
 
         final_integral = (
             torch.exp(-delta * u**2)
-            / (4 * torch.pi**2 * torch.sqrt(r0**2 - r**2))
+            / (4 * torch.pi**2 * torch.sqrt(self._determinant(r0, r)))
             * (
                 (2 * torch.exp(-alpha * gamma**2) / torch.sqrt(alpha * beta))
                 * (
-                    1 + math.sqrt(math.pi) * gamma * torch.sqrt(alpha + beta) * torch.exp(expr1) * torch.special.erf(erf_arg)
+                    1
+                    + math.sqrt(math.pi)
+                    * gamma
+                    * torch.sqrt(alpha + beta)
+                    * torch.exp(expr1)
+                    * torch.special.erf(erf_arg)
                 )
-                + 4 * torch.pi * ((alpha - beta - 2 * alpha * beta * gamma**2) / (alpha * beta))
-                * (owensT(gamma * torch.sqrt(2 * alpha * beta / (alpha + beta)), torch.sqrt(alpha / beta)) - 1 / 8)
+                + 4
+                * torch.pi
+                * ((alpha - beta - 2 * alpha * beta * gamma**2) / (alpha * beta))
+                * (
+                    owensT(
+                        gamma * torch.sqrt(2 * alpha * beta / (alpha + beta)),
+                        torch.sqrt(alpha / beta),
+                    )
+                    - 1 / 8
+                )
             )
         ) - (1 / (torch.pi**2)) * (q0 / r0) * torch.exp(-(u**2) / r0)
 
         return final_integral
+
+    def _determinant(self, r0, r):
+        return r0**2 - r**2
+
+    @property
+    def _time_scale(self):
+        """Physical time per internal time unit; subclasses normalize this."""
+        return 1.0
+
+    def _integration_mask(self, values):
+        """Preserve the historical endpoint treatment and make omissions visible."""
+        if torch.isinf(values).any():
+            raise FloatingPointError(
+                "Infinite crossing integrand; refine the grid or rescale the process."
+            )
+        valid = ~torch.isnan(values)
+        if not valid.all():
+            warnings.warn(
+                "Nonfinite small-lag samples were omitted by the compatibility quadrature. "
+                "Check convergence in epsilon_left and num_points; use the validated "
+                "PRE figure runner for publication values.",
+                NumericalIntegrationWarning,
+                stacklevel=3,
+            )
+        if valid.sum() < 2:
+            raise FloatingPointError("Fewer than two finite integration samples.")
+        return valid
+
+    def _variance_integral(
+        self, T, u, epsilon_left, epsilon_right, num_points, *, total, minimum_endpoint=None
+    ):
+        """Shared transformed trapezoidal quadrature, with legacy defaults.
+
+        t = s/(1-s) maps the positive half-line to (0, 1). This is a
+        fixed-grid approximation, not an adaptive error-controlled integral.
+        The historical near-origin correction is retained for compatibility.
+        """
+        if u is None:
+            u = self.u
+        if not isinstance(num_points, int) or isinstance(num_points, bool) or num_points < 2:
+            raise ValueError("num_points must be an integer of at least 2")
+        if not 0 < epsilon_left < 1 or not 0 <= epsilon_right < 1:
+            raise ValueError("epsilon_left must be in (0, 1) and epsilon_right in [0, 1)")
+        scale = self._time_scale
+        if T is not None and (not math.isfinite(float(T)) or T < 0):
+            raise ValueError("T must be finite and nonnegative")
+        mean_rate = self.crossing_mean_rate(u) if total else self.upcrossing_mean_rate(u)
+        if T == 0:
+            return mean_rate * 0
+        if T is None:
+            upper = 1 - epsilon_right
+        else:
+            duration = T / float(scale)
+            upper = duration / (1 + duration)
+            if minimum_endpoint is not None:
+                upper = max(upper, minimum_endpoint)
+        if upper <= epsilon_left:
+            raise ValueError("epsilon_left must be below the transformed integration endpoint")
+        grid = torch.linspace(
+            epsilon_left, upper, num_points, dtype=self.r0.dtype, device=self.r0.device
+        )
+        lag = grid / (1 - grid)
+        integrand = self.crossing_integrand if total else self.upcrossing_integrand
+        values = integrand(lag, u=u) / (1 - grid) ** 2 / scale
+        if T is not None:
+            values = values * (1 - scale * lag / T)
+        factor = 1 if total else 4
+        left_limit = (
+            -(1 / (factor * torch.pi**2))
+            * (self.q0 / self.r0)
+            * torch.exp(-(u**2) / self.r0)
+            / scale
+        )
+        valid = self._integration_mask(values)
+        integral = epsilon_left * left_limit + torch.trapezoid(values[valid], grid[valid])
+        rate = mean_rate + 2 * integral
+        return rate if T is None else T * rate
 
     def upcrossing_variance(
         self,
         T: float,
         u: Optional[Union[float, torch.Tensor]] = None,
         epsilon_left: float = 1e-5,
-        num_points: int = 1000
+        num_points: int = 1000,
     ) -> torch.Tensor:
         """Compute the variance of upcrossings over time interval T.
 
@@ -456,23 +544,14 @@ class GaussianUpCrossings:
         Returns:
             The variance of upcrossings over time T.
         """
-        if u is None:
-            u = self.u
-
-        t_prime = torch.linspace(epsilon_left, T / (1 + T), num_points)
-        x = t_prime / (1 - t_prime)
-        new_integrand_vals = (1 - x / T) * self.upcrossing_integrand(x, u=u) / (1 - t_prime)**2
-        left_limit = - (1 / (4 * torch.pi**2)) * (self.q0 / self.r0) * torch.exp(-(u**2) / self.r0)
-        integral = epsilon_left * left_limit + torch.trapz(new_integrand_vals[~torch.isnan(new_integrand_vals)], t_prime[~torch.isnan(new_integrand_vals)])
-
-        return T * (self.upcrossing_mean_rate(u=u) + 2 * integral)
+        return self._variance_integral(T, u, epsilon_left, 0.0, num_points, total=False)
 
     def upcrossing_variance_CLT_per_unit_time(
         self,
         u: Optional[Union[float, torch.Tensor]] = None,
         epsilon_left: float = 1e-5,
         epsilon_right: float = 1e-5,
-        num_points: int = 1000
+        num_points: int = 1000,
     ) -> torch.Tensor:
         """Compute the variance per unit time of upcrossings (CLT formula).
 
@@ -487,24 +566,17 @@ class GaussianUpCrossings:
         Returns:
             The variance per unit time of upcrossings.
         """
-        if u is None:
-            u = self.u
+        return self._variance_integral(
+            None, u, epsilon_left, epsilon_right, num_points, total=False
+        )
 
-        t_prime = torch.linspace(epsilon_left, 1 - epsilon_right, num_points)
-        x = t_prime / (1 - t_prime)
-        new_integrand_vals = self.upcrossing_integrand(x, u=u) / (1 - t_prime)**2
-        left_limit = - (1 / (4 * torch.pi**2)) * (self.q0 / self.r0) * torch.exp(-(u**2) / self.r0)
-        integral = epsilon_left * left_limit + torch.trapz(new_integrand_vals[~torch.isnan(new_integrand_vals)], t_prime[~torch.isnan(new_integrand_vals)])
-
-        return self.upcrossing_mean_rate(u=u) + 2 * integral
-    
     def upcrossing_variance_CLT(
         self,
         T: float,
         u: Optional[Union[float, torch.Tensor]] = None,
         epsilon_left: float = 1e-5,
         epsilon_right: float = 1e-5,
-        num_points: int = 1000
+        num_points: int = 1000,
     ) -> torch.Tensor:
         """Compute variance of upcrossings over time T (CLT formula).
 
@@ -520,14 +592,18 @@ class GaussianUpCrossings:
         Returns:
             The variance of upcrossings over time T.
         """
-        return T * (self.upcrossing_variance_CLT_per_unit_time(u=u, epsilon_left=epsilon_left, epsilon_right=epsilon_right, num_points=num_points))
+        return T * (
+            self.upcrossing_variance_CLT_per_unit_time(
+                u=u, epsilon_left=epsilon_left, epsilon_right=epsilon_right, num_points=num_points
+            )
+        )
 
     def downcrossing_variance(
         self,
         T: float,
         u: Optional[Union[float, torch.Tensor]] = None,
         epsilon_left: float = 1e-5,
-        num_points: int = 1000
+        num_points: int = 1000,
     ) -> torch.Tensor:
         """Compute the variance of downcrossings over time interval T.
 
@@ -549,7 +625,7 @@ class GaussianUpCrossings:
         u: Optional[Union[float, torch.Tensor]] = None,
         epsilon_left: float = 1e-5,
         epsilon_right: float = 1e-5,
-        num_points: int = 1000
+        num_points: int = 1000,
     ) -> torch.Tensor:
         """Compute the variance per unit time of downcrossings (CLT formula).
 
@@ -564,7 +640,9 @@ class GaussianUpCrossings:
         Returns:
             The variance per unit time of downcrossings.
         """
-        return self.upcrossing_variance_CLT_per_unit_time(u=u, epsilon_left=epsilon_left, epsilon_right=epsilon_right, num_points=num_points)
+        return self.upcrossing_variance_CLT_per_unit_time(
+            u=u, epsilon_left=epsilon_left, epsilon_right=epsilon_right, num_points=num_points
+        )
 
     def downcrossing_variance_CLT(
         self,
@@ -572,7 +650,7 @@ class GaussianUpCrossings:
         u: Optional[Union[float, torch.Tensor]] = None,
         epsilon_left: float = 1e-5,
         epsilon_right: float = 1e-5,
-        num_points: int = 1000
+        num_points: int = 1000,
     ) -> torch.Tensor:
         """Compute variance of downcrossings over time T (CLT formula).
 
@@ -588,14 +666,16 @@ class GaussianUpCrossings:
         Returns:
             The variance of downcrossings over time T.
         """
-        return self.upcrossing_variance_CLT(T, u=u, epsilon_left=epsilon_left, epsilon_right=epsilon_right, num_points=num_points)
+        return self.upcrossing_variance_CLT(
+            T, u=u, epsilon_left=epsilon_left, epsilon_right=epsilon_right, num_points=num_points
+        )
 
     def crossing_variance(
         self,
         T: float,
         u: Optional[Union[float, torch.Tensor]] = None,
         epsilon_left: float = 1e-5,
-        num_points: int = 1000
+        num_points: int = 1000,
     ) -> torch.Tensor:
         """Compute the variance of crossings over time interval T.
 
@@ -610,23 +690,14 @@ class GaussianUpCrossings:
         Returns:
             The variance of crossings over time T.
         """
-        if u is None:
-            u = self.u
+        return self._variance_integral(T, u, epsilon_left, 0.0, num_points, total=True)
 
-        t_prime = torch.linspace(epsilon_left, T / (1 + T), num_points)
-        x = t_prime / (1 - t_prime)
-        new_integrand_vals = (1 - x / T) * self.crossing_integrand(x, u=u) / (1 - t_prime)**2
-        left_limit = - (1 / torch.pi**2) * (self.q0 / self.r0) * torch.exp(-(u**2) / self.r0)
-        integral = epsilon_left * left_limit + torch.trapz(new_integrand_vals[~torch.isnan(new_integrand_vals)], t_prime[~torch.isnan(new_integrand_vals)])
-
-        return T * (self.crossing_mean_rate(u=u) + 2 * integral)
-    
     def crossing_variance_CLT_per_unit_time(
         self,
         u: Optional[Union[float, torch.Tensor]] = None,
         epsilon_left: float = 1e-5,
         epsilon_right: float = 1e-5,
-        num_points: int = 1000
+        num_points: int = 1000,
     ) -> torch.Tensor:
         """Compute the variance per unit time of crossings (CLT formula).
 
@@ -641,24 +712,15 @@ class GaussianUpCrossings:
         Returns:
             The variance per unit time of crossings.
         """
-        if u is None:
-            u = self.u
+        return self._variance_integral(None, u, epsilon_left, epsilon_right, num_points, total=True)
 
-        t_prime = torch.linspace(epsilon_left, 1 - epsilon_right, num_points)
-        x = t_prime / (1 - t_prime)
-        new_integrand_vals = self.crossing_integrand(x, u=u) / (1 - t_prime)**2
-        left_limit = - (1 / torch.pi**2) * (self.q0 / self.r0) * torch.exp(-(u**2) / self.r0)
-        integral = epsilon_left * left_limit + torch.trapz(new_integrand_vals[~torch.isnan(new_integrand_vals)], t_prime[~torch.isnan(new_integrand_vals)])
-
-        return self.crossing_mean_rate(u=u) + 2 * integral
-    
     def crossing_variance_CLT(
         self,
         T: float,
         u: Optional[Union[float, torch.Tensor]] = None,
         epsilon_left: float = 1e-5,
         epsilon_right: float = 1e-5,
-        num_points: int = 1000
+        num_points: int = 1000,
     ) -> torch.Tensor:
         """Compute variance of crossings over time T (CLT formula).
 
@@ -674,14 +736,18 @@ class GaussianUpCrossings:
         Returns:
             The variance of crossings over time T.
         """
-        return T * (self.crossing_variance_CLT_per_unit_time(u=u, epsilon_left=epsilon_left, epsilon_right=epsilon_right, num_points=num_points))
+        return T * (
+            self.crossing_variance_CLT_per_unit_time(
+                u=u, epsilon_left=epsilon_left, epsilon_right=epsilon_right, num_points=num_points
+            )
+        )
 
     def upcrossing_fano_factor_CLT(
         self,
         u: Optional[Union[float, torch.Tensor]] = None,
         epsilon_left: float = 1e-5,
         epsilon_right: float = 1e-5,
-        num_points: int = 1000
+        num_points: int = 1000,
     ) -> torch.Tensor:
         """Compute the asymptotic Fano factor F^+ for upcrossings.
 
@@ -700,14 +766,16 @@ class GaussianUpCrossings:
         Returns:
             The asymptotic Fano factor for upcrossings.
         """
-        return self.upcrossing_variance_CLT_per_unit_time(u=u, epsilon_left=epsilon_left, epsilon_right=epsilon_right, num_points=num_points) / self.upcrossing_mean_rate(u=u)
+        return self.upcrossing_variance_CLT_per_unit_time(
+            u=u, epsilon_left=epsilon_left, epsilon_right=epsilon_right, num_points=num_points
+        ) / self.upcrossing_mean_rate(u=u)
 
     def downcrossing_fano_factor_CLT(
         self,
         u: Optional[Union[float, torch.Tensor]] = None,
         epsilon_left: float = 1e-5,
         epsilon_right: float = 1e-5,
-        num_points: int = 1000
+        num_points: int = 1000,
     ) -> torch.Tensor:
         """Compute the Fano factor for downcrossings (CLT formula).
 
@@ -722,14 +790,16 @@ class GaussianUpCrossings:
         Returns:
             The Fano factor for downcrossings.
         """
-        return self.downcrossing_variance_CLT_per_unit_time(u=u, epsilon_left=epsilon_left, epsilon_right=epsilon_right, num_points=num_points) / self.downcrossing_mean_rate(u=u)
+        return self.downcrossing_variance_CLT_per_unit_time(
+            u=u, epsilon_left=epsilon_left, epsilon_right=epsilon_right, num_points=num_points
+        ) / self.downcrossing_mean_rate(u=u)
 
     def crossing_fano_factor_CLT(
         self,
         u: Optional[Union[float, torch.Tensor]] = None,
         epsilon_left: float = 1e-5,
         epsilon_right: float = 1e-5,
-        num_points: int = 1000
+        num_points: int = 1000,
     ) -> torch.Tensor:
         """Compute the asymptotic Fano factor F for total crossings.
 
@@ -748,14 +818,16 @@ class GaussianUpCrossings:
         Returns:
             The asymptotic Fano factor for total crossings.
         """
-        return self.crossing_variance_CLT_per_unit_time(u=u, epsilon_left=epsilon_left, epsilon_right=epsilon_right, num_points=num_points) / self.crossing_mean_rate(u=u)
+        return self.crossing_variance_CLT_per_unit_time(
+            u=u, epsilon_left=epsilon_left, epsilon_right=epsilon_right, num_points=num_points
+        ) / self.crossing_mean_rate(u=u)
 
     def upcrossing_fano_factor(
         self,
         T: float,
         u: Optional[Union[float, torch.Tensor]] = None,
         epsilon_left: float = 1e-5,
-        num_points: int = 1000
+        num_points: int = 1000,
     ) -> torch.Tensor:
         """Compute the Fano factor for upcrossings over time T.
 
@@ -770,14 +842,16 @@ class GaussianUpCrossings:
         Returns:
             The Fano factor for upcrossings over time T.
         """
-        return self.upcrossing_variance(T, u=u, epsilon_left=epsilon_left, num_points=num_points) / self.upcrossing_mean(T, u=u)
+        return self.upcrossing_variance(
+            T, u=u, epsilon_left=epsilon_left, num_points=num_points
+        ) / self.upcrossing_mean(T, u=u)
 
     def downcrossing_fano_factor(
         self,
         T: float,
         u: Optional[Union[float, torch.Tensor]] = None,
         epsilon_left: float = 1e-5,
-        num_points: int = 1000
+        num_points: int = 1000,
     ) -> torch.Tensor:
         """Compute the Fano factor for downcrossings over time T.
 
@@ -792,14 +866,16 @@ class GaussianUpCrossings:
         Returns:
             The Fano factor for downcrossings over time T.
         """
-        return self.downcrossing_variance(T, u=u, epsilon_left=epsilon_left, num_points=num_points) / self.downcrossing_mean(T, u=u)
+        return self.downcrossing_variance(
+            T, u=u, epsilon_left=epsilon_left, num_points=num_points
+        ) / self.downcrossing_mean(T, u=u)
 
     def crossing_fano_factor(
         self,
         T: float,
         u: Optional[Union[float, torch.Tensor]] = None,
         epsilon_left: float = 1e-5,
-        num_points: int = 1000
+        num_points: int = 1000,
     ) -> torch.Tensor:
         """Compute the Fano factor for crossings over time T.
 
@@ -814,7 +890,9 @@ class GaussianUpCrossings:
         Returns:
             The Fano factor for crossings over time T.
         """
-        return self.crossing_variance(T, u=u, epsilon_left=epsilon_left, num_points=num_points) / self.crossing_mean(T, u=u)
+        return self.crossing_variance(
+            T, u=u, epsilon_left=epsilon_left, num_points=num_points
+        ) / self.crossing_mean(T, u=u)
 
     def upcrossing_integrand_mean_level(self, t: torch.Tensor) -> torch.Tensor:
         """Compute the integrand for upcrossings variance at mean level (u=0).
@@ -837,15 +915,16 @@ class GaussianUpCrossings:
         alpha, beta, _, _ = self.compute_all_quantities(t, u=0)
 
         final_integral = (
-            1 / (8 * torch.pi**2 * torch.sqrt(r0**2 - r**2))
+            1
+            / (8 * torch.pi**2 * torch.sqrt(self._determinant(r0, r)))
             * (
                 1 / (torch.sqrt(alpha * beta))
                 + (alpha - beta) / (alpha * beta) * torch.arctan(torch.sqrt(alpha / beta))
-            )    
+            )
         ) - (1 / (4 * torch.pi**2)) * (q0 / r0)
 
         return final_integral
-    
+
     def downcrossing_integrand_mean_level(self, t: torch.Tensor) -> torch.Tensor:
         """Compute the integrand for downcrossings variance at mean level (u=0).
 
@@ -881,11 +960,12 @@ class GaussianUpCrossings:
         expr = torch.sqrt(alpha / beta)
 
         final_integral = (
-            1 / (2 * torch.pi**2 * torch.sqrt(r0**2 - r**2))
+            1
+            / (2 * torch.pi**2 * torch.sqrt(self._determinant(r0, r)))
             * (
                 1 / (torch.sqrt(alpha * beta))
                 + (alpha - beta) / (alpha * beta) * torch.arctan((expr - 1) / (expr + 1))
-            )    
+            )
         ) - (1 / (torch.pi**2)) * (q0 / r0)
 
         return final_integral

@@ -11,9 +11,22 @@ validation of the analytical results.
 
 from typing import Any, Union
 
-import torch
 import numpy as np
-from scipy.special import kv, gamma
+import torch
+from scipy.special import gamma, kv
+
+
+def _lag_tensor(t):
+    """Accept Python/NumPy inputs without detaching existing torch graphs."""
+    return t if isinstance(t, torch.Tensor) else torch.as_tensor(t, dtype=torch.float64)
+
+
+def _positive(name, value, *, allow_zero=False):
+    tensor = torch.as_tensor(value, dtype=torch.float64)
+    valid = tensor >= 0 if allow_zero else tensor > 0
+    if tensor.numel() != 1 or not bool(torch.isfinite(tensor) & valid):
+        sign = "nonnegative" if allow_zero else "positive"
+        raise ValueError(f"{name} must be a finite {sign} scalar")
 
 
 def r_damped_harmonic_oscillator_noise(
@@ -21,12 +34,12 @@ def r_damped_harmonic_oscillator_noise(
     temp: float,
     omega0: float,
     zeta: float,
-    **kwargs: Any
+    **kwargs: Any,
 ) -> torch.Tensor:
     """Compute the autocorrelation function of a stochastic damped harmonic oscillator.
 
     Computes the stationary autocorrelation function for a damped harmonic
-    oscillator driven by thermal white noise, as described in Section III.A
+    oscillator driven by thermal white noise, as described in Section IV.A
     of the paper.  The noise amplitude satisfies the fluctuation-dissipation
     theorem.  The correlation function has three qualitatively different
     forms depending on the damping regime: oscillatory decay (underdamped),
@@ -49,6 +62,9 @@ def r_damped_harmonic_oscillator_noise(
         The variance of the process is r(0) = temp / omega0^2 in all
         damping regimes, as guaranteed by the equipartition theorem.
     """
+    _positive("omega0", omega0, allow_zero=False)
+    _positive("zeta", zeta, allow_zero=False)
+    _positive("temp", temp, allow_zero=True)
     dtype = kwargs.get("dtype", torch.float64)
     device = kwargs.get("device", None)
 
@@ -94,11 +110,7 @@ def r_damped_harmonic_oscillator_noise(
 
 
 def r_filtered_OU(
-    t: Union[torch.Tensor, np.ndarray, float],
-    sigma: float,
-    tau: float,
-    kappa: float,
-    **kwargs: Any
+    t: Union[torch.Tensor, np.ndarray, float], sigma: float, tau: float, kappa: float, **kwargs: Any
 ) -> torch.Tensor:
     """Compute the autocovariance function of a filtered Ornstein-Uhlenbeck process.
 
@@ -109,7 +121,7 @@ def r_filtered_OU(
 
     Args:
         t: Time lag(s) at which to evaluate the autocovariance.
-        sigma: Standard deviation (amplitude) of the process.
+        sigma: Noise amplitude parameter. The process standard deviation follows from r(0).
         tau: Exponential decay time constant (tau_e).
         kappa: Ratio of filter time constant to tau (tau_f = kappa * tau).
         **kwargs: Additional keyword arguments (unused, for API consistency).
@@ -120,28 +132,32 @@ def r_filtered_OU(
     Raises:
         ValueError: If kappa equals 1 (degenerate case).
     """
+    t = _lag_tensor(t)
+    _positive("sigma", sigma, allow_zero=True)
+    _positive("tau", tau, allow_zero=False)
+    _positive("kappa", kappa, allow_zero=False)
+    if bool(torch.as_tensor(kappa) == 1):
+        raise ValueError(
+            "kappa=1 requires its limiting covariance; use an explicit smooth limit callback"
+        )
     return (sigma**2 / (1 - kappa**2)) * (
         torch.exp(-torch.abs(t) / tau) - kappa * torch.exp(-torch.abs(t) / (kappa * tau))
     )
 
 
 def r_OU_noise(
-    t: Union[torch.Tensor, np.ndarray, float],
-    sigma: float,
-    tau: float,
-    kappa: float,
-    **kwargs: Any
+    t: Union[torch.Tensor, np.ndarray, float], sigma: float, tau: float, kappa: float, **kwargs: Any
 ) -> torch.Tensor:
     """Compute the autocovariance function of a mean-reverting process driven by OU noise.
 
     This represents the correlation function of the process y(t) from
-    Section III.B of the paper, where a mean-reverting process is driven
+    Section IV.B of the paper, where a mean-reverting process is driven
     by Ornstein-Uhlenbeck noise.  The resulting bi-exponential correlation
     structure supports both sub- and super-Poissonian crossing statistics.
 
     Args:
         t: Time lag(s) at which to evaluate the autocovariance.
-        sigma: Standard deviation (amplitude) of the process.
+        sigma: Noise amplitude parameter. The process standard deviation follows from r(0).
         tau: Exponential decay time constant (tau_e).
         kappa: Ratio of the filter time constant to tau (tau_f = kappa * tau).
         **kwargs: Additional keyword arguments (unused, for API consistency).
@@ -149,16 +165,21 @@ def r_OU_noise(
     Returns:
         Autocovariance values at the specified time lag(s).
     """
+    t = _lag_tensor(t)
+    _positive("sigma", sigma, allow_zero=True)
+    _positive("tau", tau, allow_zero=False)
+    _positive("kappa", kappa, allow_zero=False)
+    if bool(torch.as_tensor(kappa) == 1):
+        raise ValueError(
+            "kappa=1 requires its limiting covariance; use an explicit smooth limit callback"
+        )
     return (sigma**2 * kappa / (1 - kappa**2)) * (
         torch.exp(-torch.abs(t) / tau) - kappa * torch.exp(-torch.abs(t) / (kappa * tau))
     )
 
 
 def r_OU(
-    t: Union[torch.Tensor, np.ndarray, float],
-    sigma: float,
-    tau: float,
-    **kwargs: Any
+    t: Union[torch.Tensor, np.ndarray, float], sigma: float, tau: float, **kwargs: Any
 ) -> torch.Tensor:
     """Compute the autocovariance function of an Ornstein-Uhlenbeck process.
 
@@ -167,35 +188,35 @@ def r_OU(
 
     Args:
         t: Time lag(s) at which to evaluate the autocovariance.
-        sigma: Standard deviation (amplitude) of the process.
+        sigma: Noise amplitude parameter. The process standard deviation follows from r(0).
         tau: Exponential decay time constant (correlation time).
         **kwargs: Additional keyword arguments (unused, for API consistency).
 
     Returns:
         Autocovariance values at the specified time lag(s).
     """
+    t = _lag_tensor(t)
+    _positive("sigma", sigma, allow_zero=True)
+    _positive("tau", tau, allow_zero=False)
     return sigma**2 * torch.exp(-torch.abs(t) / tau)
 
 
 def r_rational_quadratic(
-    t: Union[torch.Tensor, np.ndarray, float],
-    sigma: float,
-    tau: float,
-    alpha: float,
-    **kwargs: Any
+    t: Union[torch.Tensor, np.ndarray, float], sigma: float, tau: float, alpha: float, **kwargs: Any
 ) -> torch.Tensor:
     """Compute the rational quadratic autocorrelation function.
 
     The rational quadratic kernel can be seen as an infinite mixture of
     squared exponential kernels with different length scales.  As alpha -> inf,
     it converges to the squared exponential kernel.  This kernel is analyzed
-    in Section III.C of the paper, where the shape parameter alpha is shown
-    to critically influence crossing statistics: smaller alpha (heavier-tailed,
-    longer-range correlations) leads to super-Poissonian Fano factors.
+    in Section IV.C of the paper, where the shape parameter alpha is shown
+    to control crossing statistics together with the threshold. All five
+    curves in the revised Figure 6 have a maximum above one, including
+    the squared-exponential limit.
 
     Args:
         t: Time lag(s) at which to evaluate the autocorrelation.
-        sigma: Standard deviation (amplitude) of the process.
+        sigma: Noise amplitude parameter. The process standard deviation follows from r(0).
         tau: Length-scale parameter.
         alpha: Shape parameter controlling the mixture of scales.
             Larger alpha means the kernel is closer to squared exponential.
@@ -204,14 +225,15 @@ def r_rational_quadratic(
     Returns:
         Autocorrelation values at the specified time lag(s).
     """
-    return sigma**2 * (1 + (t / tau)**2 / (2 * alpha)) ** (-alpha)
+    t = _lag_tensor(t)
+    _positive("sigma", sigma, allow_zero=True)
+    _positive("tau", tau, allow_zero=False)
+    _positive("alpha", alpha, allow_zero=False)
+    return sigma**2 * (1 + (t / tau) ** 2 / (2 * alpha)) ** (-alpha)
 
 
 def r_squared_exp(
-    t: Union[torch.Tensor, np.ndarray, float],
-    sigma: float,
-    tau: float,
-    **kwargs: Any
+    t: Union[torch.Tensor, np.ndarray, float], sigma: float, tau: float, **kwargs: Any
 ) -> torch.Tensor:
     """Compute the squared exponential (Gaussian/RBF) autocovariance function.
 
@@ -221,22 +243,21 @@ def r_squared_exp(
 
     Args:
         t: Time lag(s) at which to evaluate the autocovariance.
-        sigma: Standard deviation (amplitude) of the process.
+        sigma: Noise amplitude parameter. The process standard deviation follows from r(0).
         tau: Length-scale parameter (characteristic time scale).
         **kwargs: Additional keyword arguments (unused, for API consistency).
 
     Returns:
         Autocovariance values at the specified time lag(s).
     """
-    return sigma**2 * torch.exp(-0.5 * (t / tau)**2)
+    t = _lag_tensor(t)
+    _positive("sigma", sigma, allow_zero=True)
+    _positive("tau", tau, allow_zero=False)
+    return sigma**2 * torch.exp(-0.5 * (t / tau) ** 2)
 
 
 def r_matern(
-    t: Union[torch.Tensor, np.ndarray, float],
-    sigma: float,
-    tau: float,
-    nu: float,
-    **kwargs: Any
+    t: Union[torch.Tensor, np.ndarray, float], sigma: float, tau: float, nu: float, **kwargs: Any
 ) -> torch.Tensor:
     """Compute the Matérn autocorrelation function.
 
@@ -249,7 +270,7 @@ def r_matern(
 
     Args:
         t: Time lag(s) at which to evaluate the autocorrelation.
-        sigma: Standard deviation (amplitude) of the process.
+        sigma: Noise amplitude parameter. The process standard deviation follows from r(0).
         tau: Length-scale parameter.
         nu: Smoothness parameter (nu > 0). Controls differentiability
             of sample paths.
@@ -262,8 +283,20 @@ def r_matern(
         Uses scipy.special.kv (modified Bessel function of the second kind)
         for computation.
     """
+    t = _lag_tensor(t)
+    _positive("sigma", sigma, allow_zero=True)
+    _positive("tau", tau, allow_zero=False)
+    _positive("nu", nu, allow_zero=False)
     t_abs = torch.abs(t)
     factor = np.sqrt(2 * nu) * t_abs / tau
+    if nu == 0.5:
+        return sigma**2 * torch.exp(-factor)
+    if nu == 1.5:
+        return sigma**2 * (1 + factor) * torch.exp(-factor)
+    if nu == 2.5:
+        return sigma**2 * (1 + factor + factor**2 / 3) * torch.exp(-factor)
+    if factor.requires_grad:
+        raise ValueError("Autograd for Matern covariance is supported for nu=0.5, 1.5, 2.5 only")
     corr = torch.zeros_like(t_abs)
     # Handle the t=0 case to avoid division by zero (the limit is sigma^2).
     nonzero = t_abs > 0
@@ -271,7 +304,9 @@ def r_matern(
         sigma**2
         * (2 ** (1 - nu) / gamma(nu))
         * (factor[nonzero] ** nu)
-        * kv(nu, factor[nonzero])
+        * torch.as_tensor(
+            kv(nu, factor[nonzero].detach().cpu().numpy()), dtype=t_abs.dtype, device=t_abs.device
+        )
     )
     corr[~nonzero] = sigma**2
     return corr

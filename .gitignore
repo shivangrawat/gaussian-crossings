@@ -179,3 +179,7 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 data/
+
+# Versioned documentation illustrations; generated research outputs stay ignored.
+!docs/assets/*.png
+figures/publication/

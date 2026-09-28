@@ -2,17 +2,16 @@
 
 This module provides a PyTorch autograd-compatible implementation of Owen's
 T function, which appears in the exact variance expressions for arbitrary-
-level crossings (Theorems 1 and 2 of the paper).  The forward pass wraps
+level crossings (Theorems III.1 and III.2 of the paper).  The forward pass wraps
 ``scipy.special.owens_t``, and analytical gradients are provided for
 backpropagation through the variance integrand.
 """
 
-from typing import Union
+import math
 
+import scipy.special
 import torch
 import torch.special
-import scipy.special
-import math
 
 
 class OwensT(torch.autograd.Function):
@@ -27,9 +26,7 @@ class OwensT(torch.autograd.Function):
 
     @staticmethod
     def forward(
-        ctx: torch.autograd.function.FunctionCtx,
-        h: torch.Tensor,
-        a: torch.Tensor
+        ctx: torch.autograd.function.FunctionCtx, h: torch.Tensor, a: torch.Tensor
     ) -> torch.Tensor:
         """Compute Owen's T function.
 
@@ -53,8 +50,7 @@ class OwensT(torch.autograd.Function):
 
     @staticmethod
     def backward(
-        ctx: torch.autograd.function.FunctionCtx,
-        grad_output: torch.Tensor
+        ctx: torch.autograd.function.FunctionCtx, grad_output: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """Compute gradients of Owen's T function.
 
@@ -74,17 +70,19 @@ class OwensT(torch.autograd.Function):
         # Analytical derivative with respect to h:
         # dT/dh = - exp(-h^2/2) * erf(a*h/sqrt(2)) / (2 * sqrt(2*pi))
         dT_dh = (
-            -torch.exp(-h**2 / 2)
+            -torch.exp(-(h**2) / 2)
             * torch.special.erf(a * h / math.sqrt(2))
             / (2 * math.sqrt(2 * math.pi))
         )
 
         # Analytical derivative with respect to a:
         # dT/da = exp(-h^2*(1+a^2)/2) / (2*pi*(1+a^2))
-        dT_da = torch.exp(-h**2 * (1 + a**2) / 2) / (2 * math.pi * (1 + a**2))
+        dT_da = torch.exp(-(h**2) * (1 + a**2) / 2) / (2 * math.pi * (1 + a**2))
 
         # Chain rule: multiply with incoming gradient
-        return grad_output * dT_dh, grad_output * dT_da
+        return (grad_output * dT_dh).sum_to_size(h.shape), (grad_output * dT_da).sum_to_size(
+            a.shape
+        )
 
 
 def owensT(h: torch.Tensor, a: torch.Tensor) -> torch.Tensor:

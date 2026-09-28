@@ -8,6 +8,7 @@ Numerical archives are separate from the manuscript; no TeX source is edited.
 from __future__ import annotations
 
 import argparse
+import ast
 from datetime import datetime, timezone
 from functools import lru_cache
 import hashlib
@@ -434,6 +435,31 @@ def calculate(output):
     return comparisons
 
 
+def verify_archive(output):
+    """Verify cached arrays and numerical source before re-exporting a run."""
+    output = Path(output)
+    run = json.loads((output / 'run.json').read_text())
+    source = output / 'run_source.py'
+    if digest(source) != run['source_sha256']:
+        raise RuntimeError('Archived source hash changed')
+    excluded = {'plot', 'style', 'panel_letter', 'fano_norm', 'save',
+                'comparison', 'main', 'verify_archive'}
+    def definitions(path):
+        tree = ast.parse(Path(path).read_text())
+        return {node.name: ast.dump(node, include_attributes=False)
+                for node in tree.body
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+                and node.name not in excluded}
+    if definitions(source) != definitions(__file__):
+        raise RuntimeError('Numerical functions differ from the archive; use a fresh output directory')
+    render = output / 'render.json'
+    if render.exists():
+        expected = json.loads(render.read_text())['arrays_sha256']
+        if digest(output / 'arrays.npz') != expected:
+            raise RuntimeError('Numerical arrays differ from their recorded hash')
+    return run
+
+
 def style():
     import matplotlib
     matplotlib.use('Agg')
@@ -765,18 +791,27 @@ Colorbar limits are printed explicitly; compare values against $F=1$, not just c
 
 
 def main():
-    parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action',choices=['validate','calculate','plot','comparison','all'])
-    parser.add_argument('--output',type=Path,default=ROOT/'data/pre_figures_20260927')
-    parser.add_argument('--figures',type=Path,required=True)
-    parser.add_argument('--paper',type=Path,default=ROOT.parent/'upcrossing_theory_tex')
-    args=parser.parse_args()
-    os.environ.setdefault('MPLCONFIGDIR',str(args.output/'build/matplotlib'))
-    Path(os.environ['MPLCONFIGDIR']).mkdir(parents=True,exist_ok=True)
-    if args.action=='validate': print(json.dumps(validate(),indent=2))
-    if args.action in ('calculate','all'): calculate(args.output)
-    if args.action in ('plot','all'): plot(args.output,args.figures)
-    if args.action in ('comparison','all'): comparison(args.output,args.figures,args.paper)
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('action', choices=['validate', 'calculate', 'plot', 'comparison', 'all'])
+    parser.add_argument('--output', type=Path, default=ROOT / 'data/pre_figures_20260927')
+    parser.add_argument('--figures', type=Path, default=ROOT / 'figures/publication')
+    parser.add_argument('--paper', type=Path, help='Manuscript checkout; only needed for comparison')
+    args = parser.parse_args()
+    if args.action == 'comparison' and args.paper is None:
+        parser.error('--paper is required for the optional manuscript comparison')
+    os.environ.setdefault('MPLCONFIGDIR', str(args.output / 'build/matplotlib'))
+    Path(os.environ['MPLCONFIGDIR']).mkdir(parents=True, exist_ok=True)
+    if args.action == 'validate':
+        print(json.dumps(validate(), indent=2))
+    if args.action in ('calculate', 'all'):
+        calculate(args.output)
+    if args.action in ('plot', 'comparison'):
+        verify_archive(args.output)
+    if args.action in ('plot', 'all'):
+        plot(args.output, args.figures)
+    if args.action == 'comparison':
+        comparison(args.output, args.figures, args.paper)
 
 
-if __name__=='__main__': main()
+if __name__ == '__main__':
+    main()

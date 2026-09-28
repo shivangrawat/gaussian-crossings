@@ -7,10 +7,10 @@ factor formulae by comparing simulation-based crossing counts against the
 analytical predictions.
 """
 
+import math
 from typing import Optional
 
 import torch
-import math
 
 from gaussian_crossings.utils.utils import dynm_fun
 
@@ -30,12 +30,7 @@ class filtered_OU:
         J: Jacobian matrix of the linearized system.
     """
 
-    def __init__(
-        self,
-        tau_e: float = 1.0,
-        tau_f: float = 1.0,
-        sigma: float = 1.0
-    ) -> None:
+    def __init__(self, tau_e: float = 1.0, tau_f: float = 1.0, sigma: float = 1.0) -> None:
         """Initialize the filtered OU process.
 
         Args:
@@ -49,10 +44,9 @@ class filtered_OU:
         self.dim = 2
 
         # Define the Jacobian matrix
-        self.J = torch.tensor([
-            [-1 / self.tau_e, 0],
-            [1 / self.tau_f, -1 / self.tau_f]
-        ])
+        self.J = torch.tensor(
+            [[-1 / self.tau_e, 0], [1 / self.tau_f, -1 / self.tau_f]], dtype=torch.float64
+        )
 
     def noise_vector(self) -> torch.Tensor:
         """Return the noise diffusion vector.
@@ -62,14 +56,10 @@ class filtered_OU:
         Returns:
             Tensor of shape (2,) containing the noise coefficients.
         """
-        return torch.tensor([self.sigma * math.sqrt(2 / self.tau_e), 0.0])
+        return torch.tensor([self.sigma * math.sqrt(2 / self.tau_e), 0.0], dtype=torch.float64)
 
     @dynm_fun
-    def _dynamical_fun(
-        self,
-        t: Optional[float],
-        vars: torch.Tensor
-    ) -> torch.Tensor:
+    def _dynamical_fun(self, t: Optional[float], vars: torch.Tensor) -> torch.Tensor:
         """Compute the drift term of the SDE.
 
         The dynamics are:
@@ -96,13 +86,13 @@ class filtered_OU:
         Returns:
             Tensor of shape (2,) containing the equilibrium state [0, 0].
         """
-        return torch.tensor([0.0, 0.0])
+        return torch.tensor([0.0, 0.0], dtype=torch.float64)
 
 
 class OU_noise:
-    """Mean-reverting process driven by Ornstein-Uhlenbeck noise (Section III.B).
+    """Mean-reverting process driven by Ornstein-Uhlenbeck noise (Section IV.B).
 
-    This class represents the two-dimensional system from Section III.B of
+    This class represents the two-dimensional system from Section IV.B of
     the paper, where a mean-reverting process y(t) is driven by an OU
     process x(t).  The ratio kappa = tau_f / tau_e controls how filtered
     the noise appears to the system and determines the crossing statistics.
@@ -115,12 +105,7 @@ class OU_noise:
         J: Jacobian matrix of the linearized system.
     """
 
-    def __init__(
-        self,
-        tau_e: float = 1.0,
-        tau_f: float = 1.0,
-        sigma: float = 1.0
-    ) -> None:
+    def __init__(self, tau_e: float = 1.0, tau_f: float = 1.0, sigma: float = 1.0) -> None:
         """Initialize the OU noise process.
 
         Args:
@@ -134,10 +119,9 @@ class OU_noise:
         self.dim = 2
 
         # Define the Jacobian matrix
-        self.J = torch.tensor([
-            [-1 / self.tau_f, 0],
-            [1 / self.tau_e, -1 / self.tau_e]
-        ])
+        self.J = torch.tensor(
+            [[-1 / self.tau_f, 0], [1 / self.tau_e, -1 / self.tau_e]], dtype=torch.float64
+        )
 
     def noise_vector(self) -> torch.Tensor:
         """Return the noise diffusion vector.
@@ -147,14 +131,10 @@ class OU_noise:
         Returns:
             Tensor of shape (2,) containing the noise coefficients.
         """
-        return torch.tensor([self.sigma * math.sqrt(2 / self.tau_f), 0.0])
+        return torch.tensor([self.sigma * math.sqrt(2 / self.tau_f), 0.0], dtype=torch.float64)
 
     @dynm_fun
-    def _dynamical_fun(
-        self,
-        t: Optional[float],
-        vars: torch.Tensor
-    ) -> torch.Tensor:
+    def _dynamical_fun(self, t: Optional[float], vars: torch.Tensor) -> torch.Tensor:
         """Compute the drift term of the SDE.
 
         The dynamics are:
@@ -181,11 +161,11 @@ class OU_noise:
         Returns:
             Tensor of shape (2,) containing the equilibrium state [0, 0].
         """
-        return torch.tensor([0.0, 0.0])
+        return torch.tensor([0.0, 0.0], dtype=torch.float64)
 
 
 class damped_harmonic_oscillator_noise:
-    """Stochastic damped harmonic oscillator model (Section III.A of the paper).
+    """Stochastic damped harmonic oscillator model (Section IV.A of the paper).
 
     This class represents a damped harmonic oscillator driven by thermal
     white noise, following the Langevin equation:
@@ -195,8 +175,8 @@ class damped_harmonic_oscillator_noise:
     fluctuation-dissipation theorem, ensuring a stationary variance of
     r(0) = temp / omega0^2.  The damping ratio zeta controls whether the
     process exhibits oscillatory (underdamped) or monotonic (overdamped)
-    correlations, which in turn determines sub- or super-Poissonian crossing
-    statistics.
+    correlations. Crossing-count dispersion depends jointly on this
+    damping and on the chosen threshold.
 
     Attributes:
         zeta: Damping ratio (zeta < 1: underdamped, zeta = 1: critical,
@@ -207,12 +187,7 @@ class damped_harmonic_oscillator_noise:
         J: Jacobian matrix of the linearized system.
     """
 
-    def __init__(
-        self,
-        zeta: float = 0.5,
-        omega0: float = 1.0,
-        temp: float = 1.0
-    ) -> None:
+    def __init__(self, zeta: float = 0.5, omega0: float = 1.0, temp: float = 1.0) -> None:
         """Initialize the damped harmonic oscillator.
 
         Args:
@@ -226,10 +201,9 @@ class damped_harmonic_oscillator_noise:
         self.dim = 2
 
         # Jacobian of the linearized system
-        self.J = torch.tensor([
-            [0, 1],
-            [-self.omega0**2, -2 * self.zeta * self.omega0]
-        ])
+        self.J = torch.tensor(
+            [[0, 1], [-(self.omega0**2), -2 * self.zeta * self.omega0]], dtype=torch.float64
+        )
 
     def noise_vector(self) -> torch.Tensor:
         """Return the noise diffusion vector.
@@ -239,14 +213,12 @@ class damped_harmonic_oscillator_noise:
         Returns:
             Tensor of shape (2,) containing the noise coefficients.
         """
-        return torch.tensor([0.0, math.sqrt(4 * self.zeta * self.omega0 * self.temp)])
+        return torch.tensor(
+            [0.0, math.sqrt(4 * self.zeta * self.omega0 * self.temp)], dtype=torch.float64
+        )
 
     @dynm_fun
-    def _dynamical_fun(
-        self,
-        t: Optional[float],
-        vars: torch.Tensor
-    ) -> torch.Tensor:
+    def _dynamical_fun(self, t: Optional[float], vars: torch.Tensor) -> torch.Tensor:
         """Compute the drift term of the SDE.
 
         The dynamics are:
@@ -275,4 +247,4 @@ class damped_harmonic_oscillator_noise:
         Returns:
             Tensor of shape (2,) containing the equilibrium state [0, 0].
         """
-        return torch.tensor([0.0, 0.0])
+        return torch.tensor([0.0, 0.0], dtype=torch.float64)

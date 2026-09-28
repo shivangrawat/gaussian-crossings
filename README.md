@@ -75,7 +75,17 @@ print(f"Finite-window ratio: {fano_T.item():.6f}")
 print(f"Long-time Fano factor: {fano_infinity.item():.6f}")
 ```
 
-These methods evaluate the analytical formulas using a fixed integration grid. Increase `num_points` and vary the endpoint cutoffs to assess convergence. For the paper's reported values and figures, use the separately validated [reproduction workflow](#reproduce-the-paper), which controls small-lag cancellation and long-time tails.
+Variance and Fano methods default to adaptive integration with stable small-lag expressions and convergence checks. The figure runner uses this same package implementation. Absolute and relative tolerances apply to the Fano ratio; inspect `model.last_integration_info` for estimated errors and cutoff refinement. The adaptive path uses SciPy on CPU and does not supply parameter gradients.
+
+```python
+fano = model.upcrossing_fano_factor_CLT(epsabs=2e-10, epsrel=2e-10)
+print(model.last_integration_info)
+
+# Preserve the previous grid calculation (including its endpoint conventions).
+fano_grid = model.upcrossing_fano_factor_CLT(method="trapezoid", num_points=10000)
+```
+
+Use `method="trapezoid"` when differentiating numerical integrals with PyTorch. Supplied paper covariances have dedicated stable expressions; custom callbacks use a checked local Taylor expansion. See [API and numerical notes](docs/api.md) for assumptions and limitations.
 
 ### Simulate and count events
 
@@ -141,7 +151,7 @@ The theory assumes a nondegenerate stationary Gaussian process with sufficiently
 
 Start with [`examples/PRE_regenerated_figures.ipynb`](examples/PRE_regenerated_figures.ipynb), or run the commands below. It uses [`examples/pre_figures.py`](examples/pre_figures.py) for the numerical figures (Figures 2–6), and also exports alternative illustrations for Figure 1 and Supplemental Figure S1. The submitted revision retains the original illustrations.
 
-The runner uses stable conditional covariances, adaptive quadrature, explicit tail checks, and independent positive Gaussian integrals. It preserves the signed error-function argument. It checks the package's integrands against those independent calculations.
+The runner uses stable conditional covariances, adaptive quadrature, explicit tail checks, and independent positive Gaussian integrals. It preserves the signed error-function argument. The numerical figures call the public package default, including all finite-window Figure 3 curves. Independent calculations remain as validation references.
 
 ### Published revision data
 
@@ -151,7 +161,7 @@ The tagged release [`pre-revision-2026-09-27`](https://github.com/shivangrawat/g
 ```bash
 uv run python examples/restore_pre_archive.py
 uv run python examples/pre_figures.py plot \
-  --output data/pre_figures_20260927 --figures figures/publication
+  --output data/pre_figures_20260927 --figures figures/publication --historical
 ```
 
 For a new calculation instead, follow the steps below.
@@ -182,11 +192,11 @@ uv run python examples/pre_figures.py all \
   --output data/pre_figures_new --figures figures/publication
 ```
 
-To re-export an existing numerical archive:
+To re-export an existing numerical archive from this package version:
 
 ```bash
 uv run python examples/pre_figures.py plot \
-  --output data/pre_figures_20260927 --figures figures/publication
+  --output data/pre_figures_adaptive --figures figures/publication
 ```
 
 Both commands stay within this repository. Existing calculation archives are protected against overwriting. Figures are PDFs; LaTeX caches and auxiliary files go under `build/` directories.
@@ -227,7 +237,7 @@ uv run ruff check gaussian_crossings tests
 uv run ruff format --check gaussian_crossings tests
 ```
 
-Tests cover 60 numerical compatibility cases, independent conditional-Gaussian integrals, sign symmetry, dimensional scaling, analytical gradients, covariance identities, sampling statistics, crossing endpoint rules, and the paper's numerical benchmarks. The full local-archive check runs when the Figure 3 archive is present; otherwise it is reported as skipped. All other tests work from a fresh clone.
+Tests cover 60 numerical compatibility cases with `method="trapezoid"`, adaptive paper benchmarks, short windows, convergence failures, custom covariances, independent conditional-Gaussian integrals, sign symmetry, dimensional scaling, analytical gradients, covariance identities, sampling statistics, crossing endpoint rules, and the paper's numerical benchmarks. The full local-archive check runs when the Figure 3 archive is present; otherwise it is reported as skipped. All other tests work from a fresh clone.
 
 Existing class names and import paths remain supported. Importing the package leaves PyTorch's global default dtype unchanged; formula evaluation uses explicit double precision. The older `GaussianUpCrossingsDimless_minimal` class retains its historical quadrature for compatibility and is not the recommended interface for new work. See [API and numerical notes](docs/api.md).
 

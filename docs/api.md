@@ -22,19 +22,28 @@ Both classes share the same formula engine. They expose `upcrossing_`, `downcros
 
 The analytical expressions are exact under the paper's assumptions. Their numerical evaluation is approximate.
 
-The package retains the original transformed trapezoidal integration rule and defaults to preserve existing results. It maps positive time to `s=t/(1+t)`. `num_points`, `epsilon_left`, and (for long-time quantities) `epsilon_right` control the grid and truncation. The historical near-zero correction is also retained. This rule does not provide a quadrature error estimate and can be sensitive to small-lag cancellation, rescaling, and slowly decaying tails.
+The main classes default to `method="adaptive"`. Variance and Fano methods accept these keyword options:
 
-The compatibility integrator issues `NumericalIntegrationWarning` if it omits NaN samples, and raises for infinite integrands or too few usable samples. Treat warnings as errors for strict exploratory checks:
+| Option | Default | Meaning |
+|---|---|---|
+| `method` | `"adaptive"` | Adaptive calculation, or `"trapezoid"` for the historical rule |
+| `epsabs`, `epsrel` | `2e-10`, `2e-10` | Absolute and relative quadrature tolerances in **Fano-factor units** |
+| `limit` | `1200` | Maximum adaptive subinterval count |
+| `cutoff` | model-specific | Initial tail cutoff in normalized lag `t*sqrt(q0/r0)`; known SDHO/RQ tails only |
+
+Return values remain float64 PyTorch tensors. Adaptive thresholds can be scalar or arrays with arbitrary shape. `last_integration_info` contains the covariance strategy, quadrature error estimate, cutoff-refinement change, function-evaluation count, and final normalized cutoff. Errors are expressed in Fano units even when requesting variance; multiply by the appropriate mean count or rate to obtain the corresponding variance-error estimate. These diagnostics are estimates, not rigorous bounds.
+
+The stable evaluator combines exponential factors, preserves the signed error-function argument, and factors cancelling covariance differences at small lags. SDHO, OU-driven, filtered-OU, rational-quadratic, and squared-exponential covariances use explicit normalized expressions. Known long-time tails are checked by extending the cutoff; RQ tails include an asymptotic correction. Nonintegrable RQ cases are rejected. Custom covariances use a right-hand Taylor expansion from autograd through order 14, checked for local convergence and agreement with the callback, followed by adaptive integration over the infinite interval. A callback without a reliable local expansion raises an explanatory error. This does not establish the paper's smoothness, nondegeneracy, or long-time integrability assumptions for an arbitrary callback.
+
+The SciPy adaptive path evaluates on CPU and does not provide parameter gradients. It rejects gradient-requiring inputs rather than silently detaching them. Integrand methods retain PyTorch differentiation and use algebraically combined exponentials. For differentiable numerical integrals, select the old rule explicitly:
 
 ```python
-import warnings
-from gaussian_crossings import NumericalIntegrationWarning
-warnings.simplefilter("error", NumericalIntegrationWarning)
+value = model.upcrossing_variance(T, method="trapezoid", num_points=10000)
 ```
 
-For the reported figures, use `examples/pre_figures.py`. It supplies separately validated, model-specific stable small-lag expressions and adaptive quadrature. Tests distinguish legacy numerical compatibility from independent accuracy checks and paper-reference values. Matching a compatibility snapshot is not an accuracy certificate.
+`method="trapezoid"` retains the original map `s=t/(1+t)`, grid sizes, endpoint cutoffs, and near-zero correction. Only this method uses `num_points`, `epsilon_left`, and `epsilon_right`. It preserves the 60 archived compatibility cases. It warns with `NumericalIntegrationWarning` when NaN samples are omitted, and raises for infinities or insufficient samples. Matching an old snapshot is not an accuracy certificate. `GaussianUpCrossingsDimless_minimal` retains this method as its default; explicit `method="adaptive"` is also available.
 
-`T=0` has zero count variance. Its variance-to-mean ratio is undefined. A very short window may require a smaller `epsilon_left`. Under the paper's linear-growth condition, the long-time total-crossing Fano factor is twice the upcrossing factor; their finite-window ratios need not obey that identity. The long-time formula requires an integrable excess pair intensity; it must not be assumed for an arbitrary covariance.
+`T=0` has zero count variance; its Fano ratio is undefined and adaptive Fano methods reject it. Total-crossing adaptive statistics use the exact stationary Gaussian count identity `Var(N_total)=4 Var(N_up)-P(endpoint indicators differ)`. The endpoint probability is integrated in a scaled form that avoids underflow. Its bounded contribution vanishes in the linear-growth long-time limit, giving `F_total=2 F_up`. Finite-window ratios generally differ from this limiting identity. Independent conditional-velocity integrals test the finite-window implementation.
 
 ## Covariance conventions
 
@@ -64,4 +73,4 @@ Python scalars and NumPy arrays are accepted by the supplied covariance function
 
 ## Maintenance changes
 
-The refactor preserves 60 representative pre-refactor numerical cases. Targeted edge-case fixes cover scalar covariance callbacks in FFT simulation, invalid covariance embeddings, broadcast gradients for Owen's T, crossing-count/time endpoint consistency, SDE time labels and state dimension, and explicit precision. The validated PRE numerical routines are unchanged. Operational runner changes keep exports inside this checkout by default and save the source for newly generated Figure 3 runs.
+The refactor preserves 60 representative pre-refactor numerical cases. Targeted edge-case fixes cover scalar covariance callbacks in FFT simulation, invalid covariance embeddings, broadcast gradients for Owen's T, crossing-count/time endpoint consistency, SDE time labels and state dimension, and explicit precision. The PRE figure runner now calls the same adaptive package implementation as ordinary users. Operational runner changes keep exports inside this checkout by default and save the source for newly generated Figure 3 runs.

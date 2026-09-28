@@ -17,6 +17,8 @@ from torch.func import grad
 
 from gaussian_crossings.utils.owensT import owensT
 
+from .integration import adaptive_fano
+
 
 class NumericalIntegrationWarning(RuntimeWarning):
     """The compatibility quadrature omitted nonfinite small-lag samples."""
@@ -37,6 +39,16 @@ class GaussianUpCrossings:
     Values below or above 1 indicate underdispersion or overdispersion,
     respectively, relative to Poisson counts.
 
+    Numerical integration:
+        Variance and Fano methods default to ``method="adaptive"``. They accept
+        ``epsabs=2e-10``, ``epsrel=2e-10`` (in Fano units), ``limit=1200``, and an
+        optional initial ``cutoff`` in normalized lag units for known tails.
+        ``last_integration_info`` records error estimates and tail refinement.
+        This CPU path is not differentiable. ``method="trapezoid"`` retains the
+        historical differentiable grid, endpoint arguments, and return types.
+        Custom covariances need a checked local Taylor expansion through
+        order 14; supplied kernels use dedicated stable expressions.
+
     Attributes:
         r_func: Correlation function r(t) of the stationary Gaussian process.
         u: Threshold level for crossings.
@@ -46,6 +58,8 @@ class GaussianUpCrossings:
         q0: Negative second derivative of the correlation at t=0,
             i.e. q0 = -r''(0).
     """
+
+    _default_integration_method = "adaptive"
 
     def __init__(
         self, r_func: Callable[..., torch.Tensor], u: float = 0, *args: Any, **kwargs: Any
@@ -69,6 +83,7 @@ class GaussianUpCrossings:
         self.u = u
         self.args = args
         self.kwargs = kwargs
+        self.last_integration_info = None
 
         # Retained compatibility attribute; not a numerical clipping tolerance.
         self.eps = 1e-15
@@ -347,22 +362,22 @@ class GaussianUpCrossings:
 
         alpha, beta, gamma, delta = self.compute_all_quantities(t, u)
 
-        expr1 = alpha**2 * gamma**2 / (alpha + beta)
+        combined_exp = torch.exp(-alpha * beta * gamma**2 / (alpha + beta))
         erf_arg = alpha * gamma / torch.sqrt(alpha + beta)
 
         final_integral = (
             torch.exp(-delta * u**2)
             / (4 * torch.pi**2 * torch.sqrt(self._determinant(r0, r)))
             * (
-                (torch.exp(-alpha * gamma**2) / (2 * torch.sqrt(alpha * beta)))
-                * (
-                    1
+                (
+                    torch.exp(-alpha * gamma**2)
                     + math.sqrt(math.pi)
                     * gamma
                     * torch.sqrt(alpha + beta)
-                    * torch.exp(expr1)
+                    * combined_exp
                     * torch.special.erf(erf_arg)
                 )
+                / (2 * torch.sqrt(alpha * beta))
                 + torch.pi
                 * ((alpha - beta - 2 * alpha * beta * gamma**2) / (alpha * beta))
                 * owensT(
@@ -415,22 +430,23 @@ class GaussianUpCrossings:
 
         alpha, beta, gamma, delta = self.compute_all_quantities(t, u)
 
-        expr1 = alpha**2 * gamma**2 / (alpha + beta)
+        combined_exp = torch.exp(-alpha * beta * gamma**2 / (alpha + beta))
         erf_arg = alpha * gamma / torch.sqrt(alpha + beta)
 
         final_integral = (
             torch.exp(-delta * u**2)
             / (4 * torch.pi**2 * torch.sqrt(self._determinant(r0, r)))
             * (
-                (2 * torch.exp(-alpha * gamma**2) / torch.sqrt(alpha * beta))
+                2
                 * (
-                    1
+                    torch.exp(-alpha * gamma**2)
                     + math.sqrt(math.pi)
                     * gamma
                     * torch.sqrt(alpha + beta)
-                    * torch.exp(expr1)
+                    * combined_exp
                     * torch.special.erf(erf_arg)
                 )
+                / torch.sqrt(alpha * beta)
                 + 4
                 * torch.pi
                 * ((alpha - beta - 2 * alpha * beta * gamma**2) / (alpha * beta))
@@ -454,6 +470,24 @@ class GaussianUpCrossings:
         """Physical time per internal time unit; subclasses normalize this."""
         return 1.0
 
+    def _integration_method(self, options):
+        method = options.get("method")
+        if method is None:
+            method = self._default_integration_method
+        if method not in ("adaptive", "trapezoid"):
+            raise ValueError("method must be 'adaptive' or 'trapezoid'")
+        return method
+
+    def _adaptive_fano(
+        self, T, u, *, total=False, method=None, epsabs=2e-10, epsrel=2e-10, limit=1200, cutoff=None
+    ):
+        self.last_integration_info = None
+        result, info = adaptive_fano(
+            self, T, u, total=total, epsabs=epsabs, epsrel=epsrel, limit=limit, cutoff=cutoff
+        )
+        self.last_integration_info = info
+        return result
+
     def _integration_mask(self, values):
         """Preserve the historical endpoint treatment and make omissions visible."""
         if torch.isinf(values).any():
@@ -464,8 +498,8 @@ class GaussianUpCrossings:
         if not valid.all():
             warnings.warn(
                 "Nonfinite small-lag samples were omitted by the compatibility quadrature. "
-                "Check convergence in epsilon_left and num_points; use the validated "
-                "PRE figure runner for publication values.",
+                "Check convergence in epsilon_left and num_points; use method='adaptive' "
+                "for controlled integration.",
                 NumericalIntegrationWarning,
                 stacklevel=3,
             )
@@ -474,14 +508,39 @@ class GaussianUpCrossings:
         return valid
 
     def _variance_integral(
-        self, T, u, epsilon_left, epsilon_right, num_points, *, total, minimum_endpoint=None
+        self,
+        T,
+        u,
+        epsilon_left,
+        epsilon_right,
+        num_points,
+        *,
+        total,
+        minimum_endpoint=None,
+        method=None,
+        epsabs=2e-10,
+        epsrel=2e-10,
+        limit=1200,
+        cutoff=None,
     ):
-        """Shared transformed trapezoidal quadrature, with legacy defaults.
+        """Dispatch to adaptive integration or the historical trapezoidal rule.
 
         t = s/(1-s) maps the positive half-line to (0, 1). This is a
         fixed-grid approximation, not an adaptive error-controlled integral.
         The historical near-origin correction is retained for compatibility.
         """
+        options = dict(method=method, epsabs=epsabs, epsrel=epsrel, limit=limit, cutoff=cutoff)
+        if self._integration_method(options) == "adaptive":
+            level = torch.as_tensor(self.u if u is None else u, dtype=torch.float64)
+            if level.numel() == 0 or not bool(torch.isfinite(level).all()):
+                raise ValueError("u must contain finite thresholds and cannot be empty")
+            if T == 0:
+                self.last_integration_info = None
+                return self.upcrossing_mean_rate(level) * 0
+            value = self._adaptive_fano(T, level, total=total, **options)
+            mean = self.crossing_mean_rate(level) if total else self.upcrossing_mean_rate(level)
+            return value * mean if T is None else value * mean * T
+        self.last_integration_info = None
         if u is None:
             u = self.u
         if not isinstance(num_points, int) or isinstance(num_points, bool) or num_points < 2:
@@ -529,22 +588,26 @@ class GaussianUpCrossings:
         u: Optional[Union[float, torch.Tensor]] = None,
         epsilon_left: float = 1e-5,
         num_points: int = 1000,
+        **integration_options,
     ) -> torch.Tensor:
         """Compute the variance of upcrossings over time interval T.
 
-        The computation maps the integration domain into [0, 1] and evaluates
-        the integral using the trapezoidal rule.
+        Adaptive integration is the default. Pass method="trapezoid" for
+        the historical fixed-grid calculation.
 
         Args:
             T: The length of the time interval.
             u: The threshold level. If not provided, uses instance's u.
             epsilon_left: Small value to avoid singularity at 0.
-            num_points: Number of points for numerical integration.
+            num_points: Grid size for method="trapezoid" only.
+            **integration_options: method, epsabs, epsrel, limit, and cutoff; see class notes.
 
         Returns:
             The variance of upcrossings over time T.
         """
-        return self._variance_integral(T, u, epsilon_left, 0.0, num_points, total=False)
+        return self._variance_integral(
+            T, u, epsilon_left, 0.0, num_points, total=False, **integration_options
+        )
 
     def upcrossing_variance_CLT_per_unit_time(
         self,
@@ -552,22 +615,24 @@ class GaussianUpCrossings:
         epsilon_left: float = 1e-5,
         epsilon_right: float = 1e-5,
         num_points: int = 1000,
+        **integration_options,
     ) -> torch.Tensor:
         """Compute the variance per unit time of upcrossings (CLT formula).
 
-        The integration maps the time domain into [0, 1] using numerical integration.
+        Adaptive integration is the default; method="trapezoid" retains the old grid.
 
         Args:
             u: The threshold level. If not provided, uses instance's u.
             epsilon_left: Small value to avoid singularity at left endpoint.
             epsilon_right: Small value to avoid singularity at right endpoint.
-            num_points: Number of points for numerical integration.
+            num_points: Grid size for method="trapezoid" only.
+            **integration_options: method, epsabs, epsrel, limit, and cutoff; see class notes.
 
         Returns:
             The variance per unit time of upcrossings.
         """
         return self._variance_integral(
-            None, u, epsilon_left, epsilon_right, num_points, total=False
+            None, u, epsilon_left, epsilon_right, num_points, total=False, **integration_options
         )
 
     def upcrossing_variance_CLT(
@@ -577,6 +642,7 @@ class GaussianUpCrossings:
         epsilon_left: float = 1e-5,
         epsilon_right: float = 1e-5,
         num_points: int = 1000,
+        **integration_options,
     ) -> torch.Tensor:
         """Compute variance of upcrossings over time T (CLT formula).
 
@@ -587,14 +653,19 @@ class GaussianUpCrossings:
             u: The threshold level. If not provided, uses instance's u.
             epsilon_left: Small value to avoid singularity at left endpoint.
             epsilon_right: Small value to avoid singularity at right endpoint.
-            num_points: Number of points for numerical integration.
+            num_points: Grid size for method="trapezoid" only.
+            **integration_options: method, epsabs, epsrel, limit, and cutoff; see class notes.
 
         Returns:
             The variance of upcrossings over time T.
         """
         return T * (
             self.upcrossing_variance_CLT_per_unit_time(
-                u=u, epsilon_left=epsilon_left, epsilon_right=epsilon_right, num_points=num_points
+                u=u,
+                epsilon_left=epsilon_left,
+                epsilon_right=epsilon_right,
+                num_points=num_points,
+                **integration_options,
             )
         )
 
@@ -604,6 +675,7 @@ class GaussianUpCrossings:
         u: Optional[Union[float, torch.Tensor]] = None,
         epsilon_left: float = 1e-5,
         num_points: int = 1000,
+        **integration_options,
     ) -> torch.Tensor:
         """Compute the variance of downcrossings over time interval T.
 
@@ -613,12 +685,15 @@ class GaussianUpCrossings:
             T: The length of the time interval.
             u: The threshold level. If not provided, uses instance's u.
             epsilon_left: Small value to avoid singularity at 0.
-            num_points: Number of points for numerical integration.
+            num_points: Grid size for method="trapezoid" only.
+            **integration_options: method, epsabs, epsrel, limit, and cutoff; see class notes.
 
         Returns:
             The variance of downcrossings over time T.
         """
-        return self.upcrossing_variance(T, u=u, epsilon_left=epsilon_left, num_points=num_points)
+        return self.upcrossing_variance(
+            T, u=u, epsilon_left=epsilon_left, num_points=num_points, **integration_options
+        )
 
     def downcrossing_variance_CLT_per_unit_time(
         self,
@@ -626,6 +701,7 @@ class GaussianUpCrossings:
         epsilon_left: float = 1e-5,
         epsilon_right: float = 1e-5,
         num_points: int = 1000,
+        **integration_options,
     ) -> torch.Tensor:
         """Compute the variance per unit time of downcrossings (CLT formula).
 
@@ -635,13 +711,18 @@ class GaussianUpCrossings:
             u: The threshold level. If not provided, uses instance's u.
             epsilon_left: Small value to avoid singularity at left endpoint.
             epsilon_right: Small value to avoid singularity at right endpoint.
-            num_points: Number of points for numerical integration.
+            num_points: Grid size for method="trapezoid" only.
+            **integration_options: method, epsabs, epsrel, limit, and cutoff; see class notes.
 
         Returns:
             The variance per unit time of downcrossings.
         """
         return self.upcrossing_variance_CLT_per_unit_time(
-            u=u, epsilon_left=epsilon_left, epsilon_right=epsilon_right, num_points=num_points
+            u=u,
+            epsilon_left=epsilon_left,
+            epsilon_right=epsilon_right,
+            num_points=num_points,
+            **integration_options,
         )
 
     def downcrossing_variance_CLT(
@@ -651,6 +732,7 @@ class GaussianUpCrossings:
         epsilon_left: float = 1e-5,
         epsilon_right: float = 1e-5,
         num_points: int = 1000,
+        **integration_options,
     ) -> torch.Tensor:
         """Compute variance of downcrossings over time T (CLT formula).
 
@@ -661,13 +743,19 @@ class GaussianUpCrossings:
             u: The threshold level. If not provided, uses instance's u.
             epsilon_left: Small value to avoid singularity at left endpoint.
             epsilon_right: Small value to avoid singularity at right endpoint.
-            num_points: Number of points for numerical integration.
+            num_points: Grid size for method="trapezoid" only.
+            **integration_options: method, epsabs, epsrel, limit, and cutoff; see class notes.
 
         Returns:
             The variance of downcrossings over time T.
         """
         return self.upcrossing_variance_CLT(
-            T, u=u, epsilon_left=epsilon_left, epsilon_right=epsilon_right, num_points=num_points
+            T,
+            u=u,
+            epsilon_left=epsilon_left,
+            epsilon_right=epsilon_right,
+            num_points=num_points,
+            **integration_options,
         )
 
     def crossing_variance(
@@ -676,21 +764,25 @@ class GaussianUpCrossings:
         u: Optional[Union[float, torch.Tensor]] = None,
         epsilon_left: float = 1e-5,
         num_points: int = 1000,
+        **integration_options,
     ) -> torch.Tensor:
         """Compute the variance of crossings over time interval T.
 
-        The integration domain is mapped into [0, 1] using numerical integration.
+        Adaptive integration is the default; method="trapezoid" retains the old grid.
 
         Args:
             T: The length of the time interval.
             u: The threshold level. If not provided, uses instance's u.
             epsilon_left: Small value to avoid singularity at 0.
-            num_points: Number of points for numerical integration.
+            num_points: Grid size for method="trapezoid" only.
+            **integration_options: method, epsabs, epsrel, limit, and cutoff; see class notes.
 
         Returns:
             The variance of crossings over time T.
         """
-        return self._variance_integral(T, u, epsilon_left, 0.0, num_points, total=True)
+        return self._variance_integral(
+            T, u, epsilon_left, 0.0, num_points, total=True, **integration_options
+        )
 
     def crossing_variance_CLT_per_unit_time(
         self,
@@ -698,21 +790,25 @@ class GaussianUpCrossings:
         epsilon_left: float = 1e-5,
         epsilon_right: float = 1e-5,
         num_points: int = 1000,
+        **integration_options,
     ) -> torch.Tensor:
         """Compute the variance per unit time of crossings (CLT formula).
 
-        The integration maps the time domain into [0, 1] using numerical integration.
+        Adaptive integration is the default; method="trapezoid" retains the old grid.
 
         Args:
             u: The threshold level. If not provided, uses instance's u.
             epsilon_left: Small value to avoid singularity at left endpoint.
             epsilon_right: Small value to avoid singularity at right endpoint.
-            num_points: Number of points for numerical integration.
+            num_points: Grid size for method="trapezoid" only.
+            **integration_options: method, epsabs, epsrel, limit, and cutoff; see class notes.
 
         Returns:
             The variance per unit time of crossings.
         """
-        return self._variance_integral(None, u, epsilon_left, epsilon_right, num_points, total=True)
+        return self._variance_integral(
+            None, u, epsilon_left, epsilon_right, num_points, total=True, **integration_options
+        )
 
     def crossing_variance_CLT(
         self,
@@ -721,6 +817,7 @@ class GaussianUpCrossings:
         epsilon_left: float = 1e-5,
         epsilon_right: float = 1e-5,
         num_points: int = 1000,
+        **integration_options,
     ) -> torch.Tensor:
         """Compute variance of crossings over time T (CLT formula).
 
@@ -731,14 +828,19 @@ class GaussianUpCrossings:
             u: The threshold level. If not provided, uses instance's u.
             epsilon_left: Small value to avoid singularity at left endpoint.
             epsilon_right: Small value to avoid singularity at right endpoint.
-            num_points: Number of points for numerical integration.
+            num_points: Grid size for method="trapezoid" only.
+            **integration_options: method, epsabs, epsrel, limit, and cutoff; see class notes.
 
         Returns:
             The variance of crossings over time T.
         """
         return T * (
             self.crossing_variance_CLT_per_unit_time(
-                u=u, epsilon_left=epsilon_left, epsilon_right=epsilon_right, num_points=num_points
+                u=u,
+                epsilon_left=epsilon_left,
+                epsilon_right=epsilon_right,
+                num_points=num_points,
+                **integration_options,
             )
         )
 
@@ -748,6 +850,7 @@ class GaussianUpCrossings:
         epsilon_left: float = 1e-5,
         epsilon_right: float = 1e-5,
         num_points: int = 1000,
+        **integration_options,
     ) -> torch.Tensor:
         """Compute the asymptotic Fano factor F^+ for upcrossings.
 
@@ -761,13 +864,20 @@ class GaussianUpCrossings:
             u: Threshold level. If not provided, uses the instance's u.
             epsilon_left: Small value to avoid singularity at left endpoint.
             epsilon_right: Small value to avoid singularity at right endpoint.
-            num_points: Number of points for numerical integration.
+            num_points: Grid size for method="trapezoid" only.
+            **integration_options: method, epsabs, epsrel, limit, and cutoff; see class notes.
 
         Returns:
             The asymptotic Fano factor for upcrossings.
         """
+        if self._integration_method(integration_options) == "adaptive":
+            return self._adaptive_fano(None, u, total=False, **integration_options)
         return self.upcrossing_variance_CLT_per_unit_time(
-            u=u, epsilon_left=epsilon_left, epsilon_right=epsilon_right, num_points=num_points
+            u=u,
+            epsilon_left=epsilon_left,
+            epsilon_right=epsilon_right,
+            num_points=num_points,
+            **integration_options,
         ) / self.upcrossing_mean_rate(u=u)
 
     def downcrossing_fano_factor_CLT(
@@ -776,6 +886,7 @@ class GaussianUpCrossings:
         epsilon_left: float = 1e-5,
         epsilon_right: float = 1e-5,
         num_points: int = 1000,
+        **integration_options,
     ) -> torch.Tensor:
         """Compute the Fano factor for downcrossings (CLT formula).
 
@@ -785,13 +896,20 @@ class GaussianUpCrossings:
             u: The threshold level. If not provided, uses instance's u.
             epsilon_left: Small value to avoid singularity at left endpoint.
             epsilon_right: Small value to avoid singularity at right endpoint.
-            num_points: Number of points for numerical integration.
+            num_points: Grid size for method="trapezoid" only.
+            **integration_options: method, epsabs, epsrel, limit, and cutoff; see class notes.
 
         Returns:
             The Fano factor for downcrossings.
         """
+        if self._integration_method(integration_options) == "adaptive":
+            return self._adaptive_fano(None, u, total=False, **integration_options)
         return self.downcrossing_variance_CLT_per_unit_time(
-            u=u, epsilon_left=epsilon_left, epsilon_right=epsilon_right, num_points=num_points
+            u=u,
+            epsilon_left=epsilon_left,
+            epsilon_right=epsilon_right,
+            num_points=num_points,
+            **integration_options,
         ) / self.downcrossing_mean_rate(u=u)
 
     def crossing_fano_factor_CLT(
@@ -800,6 +918,7 @@ class GaussianUpCrossings:
         epsilon_left: float = 1e-5,
         epsilon_right: float = 1e-5,
         num_points: int = 1000,
+        **integration_options,
     ) -> torch.Tensor:
         """Compute the asymptotic Fano factor F for total crossings.
 
@@ -813,13 +932,20 @@ class GaussianUpCrossings:
             u: Threshold level. If not provided, uses the instance's u.
             epsilon_left: Small value to avoid singularity at left endpoint.
             epsilon_right: Small value to avoid singularity at right endpoint.
-            num_points: Number of points for numerical integration.
+            num_points: Grid size for method="trapezoid" only.
+            **integration_options: method, epsabs, epsrel, limit, and cutoff; see class notes.
 
         Returns:
             The asymptotic Fano factor for total crossings.
         """
+        if self._integration_method(integration_options) == "adaptive":
+            return self._adaptive_fano(None, u, total=True, **integration_options)
         return self.crossing_variance_CLT_per_unit_time(
-            u=u, epsilon_left=epsilon_left, epsilon_right=epsilon_right, num_points=num_points
+            u=u,
+            epsilon_left=epsilon_left,
+            epsilon_right=epsilon_right,
+            num_points=num_points,
+            **integration_options,
         ) / self.crossing_mean_rate(u=u)
 
     def upcrossing_fano_factor(
@@ -828,6 +954,7 @@ class GaussianUpCrossings:
         u: Optional[Union[float, torch.Tensor]] = None,
         epsilon_left: float = 1e-5,
         num_points: int = 1000,
+        **integration_options,
     ) -> torch.Tensor:
         """Compute the Fano factor for upcrossings over time T.
 
@@ -837,13 +964,16 @@ class GaussianUpCrossings:
             T: The length of the time interval.
             u: The threshold level. If not provided, uses instance's u.
             epsilon_left: Small value to avoid singularity at 0.
-            num_points: Number of points for numerical integration.
+            num_points: Grid size for method="trapezoid" only.
+            **integration_options: method, epsabs, epsrel, limit, and cutoff; see class notes.
 
         Returns:
             The Fano factor for upcrossings over time T.
         """
+        if self._integration_method(integration_options) == "adaptive":
+            return self._adaptive_fano(T, u, total=False, **integration_options)
         return self.upcrossing_variance(
-            T, u=u, epsilon_left=epsilon_left, num_points=num_points
+            T, u=u, epsilon_left=epsilon_left, num_points=num_points, **integration_options
         ) / self.upcrossing_mean(T, u=u)
 
     def downcrossing_fano_factor(
@@ -852,6 +982,7 @@ class GaussianUpCrossings:
         u: Optional[Union[float, torch.Tensor]] = None,
         epsilon_left: float = 1e-5,
         num_points: int = 1000,
+        **integration_options,
     ) -> torch.Tensor:
         """Compute the Fano factor for downcrossings over time T.
 
@@ -861,13 +992,16 @@ class GaussianUpCrossings:
             T: The length of the time interval.
             u: The threshold level. If not provided, uses instance's u.
             epsilon_left: Small value to avoid singularity at 0.
-            num_points: Number of points for numerical integration.
+            num_points: Grid size for method="trapezoid" only.
+            **integration_options: method, epsabs, epsrel, limit, and cutoff; see class notes.
 
         Returns:
             The Fano factor for downcrossings over time T.
         """
+        if self._integration_method(integration_options) == "adaptive":
+            return self._adaptive_fano(T, u, total=False, **integration_options)
         return self.downcrossing_variance(
-            T, u=u, epsilon_left=epsilon_left, num_points=num_points
+            T, u=u, epsilon_left=epsilon_left, num_points=num_points, **integration_options
         ) / self.downcrossing_mean(T, u=u)
 
     def crossing_fano_factor(
@@ -876,6 +1010,7 @@ class GaussianUpCrossings:
         u: Optional[Union[float, torch.Tensor]] = None,
         epsilon_left: float = 1e-5,
         num_points: int = 1000,
+        **integration_options,
     ) -> torch.Tensor:
         """Compute the Fano factor for crossings over time T.
 
@@ -885,13 +1020,16 @@ class GaussianUpCrossings:
             T: The length of the time interval.
             u: The threshold level. If not provided, uses instance's u.
             epsilon_left: Small value to avoid singularity at 0.
-            num_points: Number of points for numerical integration.
+            num_points: Grid size for method="trapezoid" only.
+            **integration_options: method, epsabs, epsrel, limit, and cutoff; see class notes.
 
         Returns:
             The Fano factor for crossings over time T.
         """
+        if self._integration_method(integration_options) == "adaptive":
+            return self._adaptive_fano(T, u, total=True, **integration_options)
         return self.crossing_variance(
-            T, u=u, epsilon_left=epsilon_left, num_points=num_points
+            T, u=u, epsilon_left=epsilon_left, num_points=num_points, **integration_options
         ) / self.crossing_mean(T, u=u)
 
     def upcrossing_integrand_mean_level(self, t: torch.Tensor) -> torch.Tensor:

@@ -16,8 +16,8 @@ class GaussianUpCrossingsDimless(GaussianUpCrossings):
     Integrand arguments are dimensionless lags. ``tau=None`` means unit time.
 
     The public methods and import path are retained from the original code.
-    They use the same fixed-grid quadrature as :class:`GaussianUpCrossings`;
-    callers should check convergence before interpreting numerical values.
+    They share the adaptive default and ``method="trapezoid"`` compatibility
+    option of :class:`GaussianUpCrossings`. Tolerances refer to Fano units.
     """
 
     def __init__(
@@ -44,15 +44,23 @@ class GaussianUpCrossingsDimless(GaussianUpCrossings):
         return self.r_func(t, *self.args, tau=1.0, **self.kwargs)
 
     def crossing_variance_CLT_per_unit_time(
-        self, u=None, epsilon_left=1e-4, epsilon_right=1e-5, num_points=1000
+        self, u=None, epsilon_left=1e-4, epsilon_right=1e-5, num_points=1000, **integration_options
     ):
         """Total-crossing variance rate, preserving the historical cutoff."""
         return super().crossing_variance_CLT_per_unit_time(
-            u, epsilon_left, epsilon_right, num_points
+            u, epsilon_left, epsilon_right, num_points, **integration_options
         )
 
     def crossing_variance_CLT(
-        self, T, u=None, epsilon_left=1e-4, epsilon_right=1e-5, num_points=1000
+        self,
+        T,
+        u=None,
+        epsilon_left=1e-4,
+        epsilon_right=1e-5,
+        num_points=1000,
+        **integration_options,
     ):
         """Asymptotic total-crossing variance over a physical duration T."""
-        return super().crossing_variance_CLT(T, u, epsilon_left, epsilon_right, num_points)
+        return super().crossing_variance_CLT(
+            T, u, epsilon_left, epsilon_right, num_points, **integration_options
+        )

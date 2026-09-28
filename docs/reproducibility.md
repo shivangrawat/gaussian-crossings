@@ -34,9 +34,9 @@ uv run python examples/pre_figures.py plot \
 uv run python examples/pre_figures.py validate
 ```
 
-`all` performs the calculation and figure export. It does not need a manuscript repository. The notebook defaults to `data/pre_figures_20260927` and `figures/publication`; optional `GAUSSIAN_CROSSINGS_ARCHIVE` and `GAUSSIAN_CROSSINGS_FIGURES` environment variables override those paths for isolated validation.
+`all` performs the calculation and figure export. It does not need a manuscript repository. The notebook defaults to the fresh archive `data/pre_figures_adaptive` and `figures/publication`; optional `GAUSSIAN_CROSSINGS_ARCHIVE` and `GAUSSIAN_CROSSINGS_FIGURES` environment variables override those paths for isolated validation.
 
-The numerical archive contains `arrays.npz`, `validation.json`, `comparisons.json`, `run.json`, and `run_source.py`. Source-notebook hashes record the original parameter sources. Export creates `render.json`, recording the renderer and array hashes separately so plot-only refinements do not replace numerical provenance. Matplotlib's TeX cache and comparison build products remain in `build/` directories.
+The numerical archive contains `arrays.npz`, `validation.json`, `comparisons.json`, `run.json`, and `run_source.py`. Source-notebook hashes record the original parameter sources. Package source hashes record the exact shared numerical implementation, including uncommitted changes. Cached new archives require these hashes to match; changed code requires a fresh calculation. Export creates `render.json`, recording the renderer and array hashes separately so plot-only refinements do not replace numerical provenance. Matplotlib's TeX cache and comparison build products remain in `build/` directories.
 
 ## Figure map
 
@@ -50,11 +50,11 @@ The numerical archive contains `arrays.npz`, `validation.json`, `comparisons.jso
 | 6 | `rational_quadratic_fano.pdf` | Four rational-quadratic shapes and their squared-exponential limit |
 | S1 (alternative) | `positive_quadrant_new.pdf` | Integration-region change of variables; revision uses original schematic |
 
-The seven retained original figure notebooks document the earlier figure calculations and parameters. Their default fixed-grid calculations are not a substitute for the revised runner's convergence-controlled exports. Exploratory notebooks for other kernels, parameter estimation, and ad hoc checks were removed; relevant checks now live in `tests/`.
+The seven retained original figure notebooks document the earlier figure calculations and parameters. Their package calls now use adaptive integration by default; their older meshes and simulation settings still differ from the revised manuscript. The PRE notebook is the complete revised-figure reproduction entry point. Exploratory notebooks for other kernels, parameter estimation, and ad hoc checks were removed; relevant checks now live in `tests/`.
 
 ## What is checked
 
-The runner checks small-lag covariance expressions with high precision, conditional-Gaussian pair intensities independently of the Owen's-T expression, both package interfaces, sign symmetry, physical OU/SDHO rescaling, and finite-window Figure 3 theory. Representative integrals are repeated with tighter tolerances and longer cutoffs. Rational-quadratic tails receive analytic corrections and a cutoff-doubling check. Invalid covariances or failed adaptive integration raise errors.
+All numerical figure grids and all 101 finite-window Figure 3 curve positions are recalculated through the public package default. Archived trial counts and bootstrap intervals are preserved. The runner checks small-lag covariance expressions with high precision, conditional-Gaussian pair intensities independently of the Owen's-T expression, both package interfaces, sign symmetry, physical OU/SDHO rescaling, and finite-window Figure 3 theory. Representative integrals are repeated with tighter tolerances and longer cutoffs. Rational-quadratic tails receive analytic corrections and a cutoff-doubling check. Invalid covariances or failed adaptive integration raise errors.
 
 Figure 3's 95% percentile intervals resample whole independent trial rows, retaining dependence across thresholds and grids. They are pointwise, not simultaneous bands. The archived two marginal interval misses are preserved. The validation criteria concern stationary moments, sampling-grid effects, and remaining mean-count bias; agreement with every individual confidence interval is not imposed as a pass condition.
 
@@ -71,8 +71,20 @@ A separate review command compares the original manuscript exports with the revi
 
 ```bash
 uv run python examples/pre_figures.py comparison \
-  --output data/pre_figures_20260927 --figures figures/publication \
+  --output data/pre_figures_20260927 --figures figures/publication --historical \
   --paper /path/to/upcrossing_theory_tex
 ```
 
 This requires the manuscript checkout and its historical figures. It builds under the numerical archive's `build/` directory and copies the final PDF to the parent of the figure destination. It does not edit manuscript source. It is not part of normal figure regeneration.
+
+The published pre-feature archive can still be exported with `plot --historical` after checksum-verified restoration. This explicitly exports the saved historical values without claiming they were calculated by the new package. Ordinary cached exports keep strict runner and package-source checks.
+
+To check a fresh package calculation against the restored manuscript arrays:
+
+```bash
+uv run python examples/pre_figures.py all \
+  --output data/pre_figures_adaptive --figures figures/publication \
+  --reference data/pre_figures_20260927
+```
+
+The check compares every stored grid point, all Figure 3 theory curves, coordinates, and masked boundaries. It requires absolute changes below `2e-8` for Fano grids and `1e-8` for Figure 3 statistics, with identical coordinates. Results and both array hashes are saved in `comparison_to_reference.json`. It does not replace the reference archive.

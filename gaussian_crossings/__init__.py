@@ -10,6 +10,7 @@ from .formula import (
     GaussianUpCrossings,
     GaussianUpCrossingsDimless,
     GaussianUpCrossingsDimless_minimal,
+    IntegrationInfo,
     NumericalIntegrationWarning,
 )
 
@@ -20,4 +21,5 @@ __all__ = [
     "GaussianUpCrossingsDimless",
     "GaussianUpCrossingsDimless_minimal",
     "NumericalIntegrationWarning",
+    "IntegrationInfo",
 ]

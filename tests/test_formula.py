@@ -115,7 +115,7 @@ def test_invalid_process_and_quadrature_inputs():
     assert model.upcrossing_variance(0.0) == 0
     for options in ({"num_points": 1}, {"epsilon_left": 0}, {"epsilon_left": 0.9}):
         with pytest.raises(ValueError):
-            model.upcrossing_variance(1.0, **options)
+            model.upcrossing_variance(1.0, method="trapezoid", **options)
     with pytest.raises(ValueError):
         GaussianUpCrossingsDimless(r_squared_exp, sigma=1.0, tau=-1.0)
 

@@ -13,6 +13,8 @@ from .formula_dimless import GaussianUpCrossingsDimless
 class GaussianUpCrossingsDimless_minimal(GaussianUpCrossingsDimless):
     """Legacy dimensionless implementation with magnitude-filtered samples."""
 
+    _default_integration_method = "trapezoid"
+
     def _determinant(self, r0, r):
         return torch.abs(r0**2 - r**2)
 
@@ -20,7 +22,13 @@ class GaussianUpCrossingsDimless_minimal(GaussianUpCrossingsDimless):
         return ~(torch.abs(values) < 1e-5)
 
     def upcrossing_variance(
-        self, T, u=None, epsilon_left=1e-5, epsilon_right=1e-2, num_points=1000
+        self,
+        T,
+        u=None,
+        epsilon_left=1e-5,
+        epsilon_right=1e-2,
+        num_points=1000,
+        **integration_options,
     ):
         """Finite-window variance with the original minimum endpoint."""
         return self._variance_integral(
@@ -31,20 +39,27 @@ class GaussianUpCrossingsDimless_minimal(GaussianUpCrossingsDimless):
             num_points,
             total=False,
             minimum_endpoint=epsilon_right,
+            **integration_options,
         )
 
     def upcrossing_variance_CLT_per_unit_time(
-        self, u=None, epsilon_left=1e-5, epsilon_right=1e-2, num_points=1000
+        self, u=None, epsilon_left=1e-5, epsilon_right=1e-2, num_points=1000, **integration_options
     ):
         """Asymptotic variance rate with the original tail cutoff."""
         return self._variance_integral(
-            None, u, epsilon_left, epsilon_right, num_points, total=False
+            None, u, epsilon_left, epsilon_right, num_points, total=False, **integration_options
         )
 
     def upcrossing_variance_CLT(
-        self, T, u=None, epsilon_left=1e-5, epsilon_right=1e-2, num_points=1000
+        self,
+        T,
+        u=None,
+        epsilon_left=1e-5,
+        epsilon_right=1e-2,
+        num_points=1000,
+        **integration_options,
     ):
         """Asymptotic variance over T with the original tail cutoff."""
         return T * self.upcrossing_variance_CLT_per_unit_time(
-            u, epsilon_left, epsilon_right, num_points
+            u, epsilon_left, epsilon_right, num_points, **integration_options
         )

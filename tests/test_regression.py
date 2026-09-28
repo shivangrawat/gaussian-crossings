@@ -21,7 +21,7 @@ def test_pre_refactor_statistics(case):
         getattr(process, case["correlation"]), u=case["u"], **case["parameters"]
     )
     lag = torch.tensor([0.1, 0.4, 1.0, 4.0], dtype=torch.float64)
-    options = case["integration_options"]
+    options = {**case["integration_options"], "method": "trapezoid"}
     actual = {
         "r0": model.r0,
         "q0": model.q0,
@@ -33,9 +33,9 @@ def test_pre_refactor_statistics(case):
     if "total_integrand" in case["expected"]:
         actual.update(
             total_integrand=model.crossing_integrand(lag),
-            total_variance=model.crossing_variance(10.0),
-            total_variance_rate=model.crossing_variance_CLT_per_unit_time(),
-            fano=model.upcrossing_fano_factor_CLT(),
+            total_variance=model.crossing_variance(10.0, method="trapezoid"),
+            total_variance_rate=model.crossing_variance_CLT_per_unit_time(method="trapezoid"),
+            fano=model.upcrossing_fano_factor_CLT(method="trapezoid"),
         )
     for name, value in actual.items():
         np.testing.assert_allclose(

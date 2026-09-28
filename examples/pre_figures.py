@@ -161,6 +161,16 @@ def integrate_vector(fn, end, tol):
 
 
 def sdho_fano(zeta, levels, tol=2e-10, cutoff=40., historical=False, direct=False):
+    if not historical and not direct:
+        from gaussian_crossings import GaussianUpCrossings
+        from gaussian_crossings.process import r_damped_harmonic_oscillator_noise
+        model = GaussianUpCrossings(r_damped_harmonic_oscillator_noise,
+                                    temp=1., omega0=1., zeta=float(zeta))
+        slow = zeta if zeta <= 1 else 1/(zeta+math.sqrt(zeta*zeta-1))
+        value = model.upcrossing_fano_factor_CLT(
+            u=np.atleast_1d(np.asarray(levels, dtype=float)),
+            epsabs=tol, epsrel=tol, cutoff=cutoff/slow)
+        return value.numpy(), model.last_integration_info.estimated_error
     levels = np.atleast_1d(np.asarray(levels,dtype=float))
     nu = np.exp(-levels*levels/2)/(2*PI)
     slow = zeta if zeta <= 1 else 1/(zeta+math.sqrt(zeta*zeta-1))
@@ -191,6 +201,16 @@ def rq_tail(shape, end, levels):
 
 
 def rq_fano(shape,levels,tol=2e-10,end=2048.,historical=False,direct=False):
+    if not historical and not direct:
+        from gaussian_crossings import GaussianUpCrossings
+        from gaussian_crossings.process import r_rational_quadratic, r_squared_exp
+        kernel = r_squared_exp if math.isinf(shape) else r_rational_quadratic
+        parameters = {} if math.isinf(shape) else {'alpha':float(shape)}
+        model = GaussianUpCrossings(kernel, sigma=1., tau=1., **parameters)
+        value = model.upcrossing_fano_factor_CLT(
+            u=np.atleast_1d(np.asarray(levels, dtype=float)),
+            epsabs=tol, epsrel=tol, cutoff=end)
+        return value.numpy(), model.last_integration_info.estimated_error
     levels = np.atleast_1d(np.asarray(levels,dtype=float))
     nu = np.exp(-levels*levels/2)/(2*PI)
     def fn(t):
@@ -201,6 +221,25 @@ def rq_fano(shape,levels,tol=2e-10,end=2048.,historical=False,direct=False):
     # The sign error changes a term quadratic in p, so it does not change
     # the retained r, q, r^2 asymptotic terms.
     return 1+value+rq_tail(shape,end,levels),error
+
+
+def package_theory(zeta, levels, duration=120.):
+    """Finite-window predictions through the public package's default method."""
+    import torch
+    from gaussian_crossings import GaussianUpCrossings
+    from gaussian_crossings.process import r_damped_harmonic_oscillator_noise
+    model = GaussianUpCrossings(r_damped_harmonic_oscillator_noise,
+                                temp=1., omega0=1., zeta=float(zeta))
+    levels = torch.as_tensor(levels, dtype=torch.float64)
+    mean = model.upcrossing_mean(duration, u=levels)
+    fano = model.upcrossing_fano_factor(duration, u=levels)
+    return torch.stack((mean, mean*fano, fano), dim=-1).numpy()
+
+
+def package_hashes():
+    """Record the actual package used, including uncommitted source changes."""
+    return {str(path.relative_to(ROOT)):digest(path)
+            for path in sorted((ROOT/'gaussian_crossings').rglob('*.py'))}
 
 
 def validate():
@@ -416,16 +455,23 @@ def calculate(output):
         if len(above) and np.any(row[above[0]:] < 1-1e-7):
             reentrant_rows.append(float(arrays['ou_parameters'][j]))
     comparisons['ou_reentrant_rows_in_plotted_grid'] = reentrant_rows
+    summary = json.loads((ROOT/'data/pre_figure3_10000/summary.json').read_text())
+    curves = np.array([package_theory(z, fig3.LEVELS) for z in summary['curve_zeta']])
+    point_theory = np.array([package_theory(p['zeta'], fig3.LEVELS) for p in summary['points']])
+    checks['fig3_full_package_curve_max_abs_change'] = float(np.max(np.abs(curves-np.asarray(summary['curve']))))
+    if checks['fig3_full_package_curve_max_abs_change'] > 1e-8:
+        raise AssertionError('Package finite-window curves differ from the Figure 3 reference')
+    arrays.update(fig3_curve=curves, fig3_point_theory=point_theory)
     np.savez_compressed(output/'arrays.npz',**arrays)
     write_json(output/'validation.json',checks)
     write_json(output/'comparisons.json',comparisons)
     metadata = {'created_utc':datetime.now(timezone.utc).isoformat(),
                 'git_head':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),
                 'python':platform.python_version(),'numpy':np.__version__,'scipy':scipy.__version__,
-                'source_sha256':digest(__file__),'notebooks':{k:({'path':v,'sha256':digest(ROOT/v)} if v else 'Source not found; reconstructed from t=t2-t1, s=t2') for k,v in NOTEBOOKS.items()},
+                'source_sha256':digest(__file__),'package_sha256':package_hashes(),'notebooks':{k:({'path':v,'sha256':digest(ROOT/v)} if v else 'Source not found; reconstructed from t=t2-t1, s=t2') for k,v in NOTEBOOKS.items()},
                 'fig3_archive':str(ROOT/'data/pre_figure3_10000'),
                 'fig3_summary_sha256':digest(ROOT/'data/pre_figure3_10000/summary.json'),
-                'numerics':'signed erf; normalized conditional variances; adaptive quad_vec; independently checked positive Gaussian integral',
+                'numerics':'public GaussianUpCrossings default adaptive integration; independent positive Gaussian checks',
                 'temperature_zero':'explicitly masked: deterministic zero-variance process has undefined crossing Fano ratio',
                 'mesh_sizes':{'Fig2':[250,250],'Fig4_omega':[200,200],'Fig4_temperature':[201,200],'Fig5':[200,200],'Fig6':[5,500]},
                 'wall_seconds':time.monotonic()-start}
@@ -435,7 +481,43 @@ def calculate(output):
     return comparisons
 
 
-def verify_archive(output):
+def compare_reference(output, reference, atol=2e-8):
+    """Compare every saved numerical point, preserving masks and coordinates."""
+    output, reference = Path(output), Path(reference)
+    if output.resolve() == reference.resolve():
+        raise ValueError('The new calculation and reference must be different archives')
+    results = {}
+    with np.load(output/'arrays.npz') as actual, np.load(reference/'arrays.npz') as expected:
+        for name in expected.files:
+            a, b = actual[name], expected[name]
+            if a.shape != b.shape or not np.array_equal(np.isnan(a), np.isnan(b)):
+                raise AssertionError(f'{name}: shape or invalid-domain mask changed')
+            if not np.array_equal(np.isposinf(a), np.isposinf(b)) or not np.array_equal(np.isneginf(a), np.isneginf(b)):
+                raise AssertionError(f'{name}: infinite-value mask changed')
+            finite = np.isfinite(b)
+            change = float(np.max(np.abs(a[finite]-b[finite]))) if np.any(finite) else 0.
+            bound = atol if 'fano' in name else 0.
+            if change > bound:
+                raise AssertionError(f'{name}: maximum change {change} exceeds {bound}')
+            results[name] = {'shape':list(a.shape), 'finite_points':int(np.sum(finite)),
+                             'maximum_absolute_change':change, 'absolute_tolerance':bound}
+        summary = json.loads((reference/'summary.json').read_text())
+        for name, expected_values in [('fig3_curve',summary['curve']),
+                                      ('fig3_point_theory',[p['theory'] for p in summary['points']])]:
+            b = np.asarray(expected_values)
+            np.testing.assert_allclose(actual[name], b, atol=1e-8, rtol=0)
+            results[name] = {'shape':list(b.shape), 'finite_points':int(b.size),
+                             'maximum_absolute_change':float(np.max(np.abs(actual[name]-b))),
+                             'absolute_tolerance':1e-8}
+    report = {'status':'passed', 'reference':str(reference.resolve()),
+              'reference_arrays_sha256':digest(reference/'arrays.npz'),
+              'new_arrays_sha256':digest(output/'arrays.npz'), 'comparisons':results}
+    write_json(output/'comparison_to_reference.json',report)
+    print('Every numerical grid/curve agrees with the reference within the declared tolerances',flush=True)
+    return report
+
+
+def verify_archive(output, historical=False):
     """Verify cached arrays and numerical source before re-exporting a run."""
     output = Path(output)
     run = json.loads((output / 'run.json').read_text())
@@ -450,9 +532,15 @@ def verify_archive(output):
                 for node in tree.body
                 if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
                 and node.name not in excluded}
-    if definitions(source) != definitions(__file__):
+    if historical and run.get('package_sha256') is not None:
+        raise RuntimeError('--historical is only for pre-feature reference archives')
+    if not historical and definitions(source) != definitions(__file__):
         raise RuntimeError('Numerical functions differ from the archive; use a fresh output directory')
+    if run.get('package_sha256') is not None and run['package_sha256'] != package_hashes():
+        raise RuntimeError('Package source differs from the archive; use a fresh output directory')
     render = output / 'render.json'
+    if historical and not render.exists():
+        raise RuntimeError('Historical export requires the recorded numerical-array hash')
     if render.exists():
         expected = json.loads(render.read_text())['arrays_sha256']
         if digest(output / 'arrays.npz') != expected:
@@ -568,7 +656,12 @@ def plot(output,destination):
         fig.tight_layout(w_pad=2)
         save(fig,destination/(name+'.pdf'))
     # Fig. 3: reuse all archived trials and CIs; no fresh selection or resampling.
-    shutil.copyfile(ROOT/'data/pre_figure3_10000/summary.json',output/'summary.json')
+    summary = json.loads((ROOT/'data/pre_figure3_10000/summary.json').read_text())
+    if 'fig3_curve' in arrays:
+        summary['curve'] = arrays['fig3_curve'].tolist()
+        for point, theory in zip(summary['points'], arrays['fig3_point_theory']):
+            point['theory'] = theory.tolist()
+    write_json(output/'summary.json', summary)
     fig3.plot(output)
     shutil.copyfile(output/'sdho_comparison.pdf',destination/'sdho_comparison.pdf')
     # Fig. 4: preserve the two-row layout, palette, labels and panel lettering.
@@ -793,10 +886,15 @@ Colorbar limits are printed explicitly; compare values against $F=1$, not just c
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('action', choices=['validate', 'calculate', 'plot', 'comparison', 'all'])
-    parser.add_argument('--output', type=Path, default=ROOT / 'data/pre_figures_20260927')
+    parser.add_argument('--output', type=Path, default=ROOT / 'data/pre_figures_adaptive')
     parser.add_argument('--figures', type=Path, default=ROOT / 'figures/publication')
     parser.add_argument('--paper', type=Path, help='Manuscript checkout; only needed for comparison')
+    parser.add_argument('--reference', type=Path, help='Compare all numerical points to this reference archive')
+    parser.add_argument('--historical', action='store_true',
+                        help='Export a checksum-verified pre-feature archive without recalculation')
     args = parser.parse_args()
+    if args.historical and args.action not in ('plot', 'comparison'):
+        parser.error('--historical is only for cached plot/comparison exports')
     if args.action == 'comparison' and args.paper is None:
         parser.error('--paper is required for the optional manuscript comparison')
     os.environ.setdefault('MPLCONFIGDIR', str(args.output / 'build/matplotlib'))
@@ -806,7 +904,9 @@ def main():
     if args.action in ('calculate', 'all'):
         calculate(args.output)
     if args.action in ('plot', 'comparison'):
-        verify_archive(args.output)
+        verify_archive(args.output, historical=args.historical)
+    if args.reference is not None:
+        compare_reference(args.output, args.reference)
     if args.action in ('plot', 'all'):
         plot(args.output, args.figures)
     if args.action == 'comparison':

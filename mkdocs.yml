@@ -67,6 +67,9 @@ plugins:
             separate_signature: true
             show_signature_annotations: false
 
+hooks:
+  - mkdocs_hooks.py
+
 nav:
   - Home: index.md
   - Installation: installation.md

@@ -1,6 +1,7 @@
 """Time-normalized crossing statistics sharing the dimensional formula engine."""
 
 import inspect
+import warnings
 from typing import Any, Callable, Optional
 
 import torch
@@ -32,6 +33,12 @@ class GaussianUpCrossingsDimless(GaussianUpCrossings):
     The public methods and import path are retained from the original code.
     They share the adaptive default and ``method="trapezoid"`` compatibility
     option of :class:`GaussianUpCrossings`. Tolerances refer to Fano units.
+
+    .. deprecated:: 0.2.0
+        Use :class:`GaussianUpCrossings` (also available as
+        ``GaussianCrossings``) and pass the time scale to the covariance
+        function, for example ``tau=...``; long-time Fano factors do not depend
+        on it.
     """
 
     def __init__(
@@ -42,6 +49,13 @@ class GaussianUpCrossingsDimless(GaussianUpCrossings):
         *args: Any,
         **kwargs: Any,
     ) -> None:
+        warnings.warn(
+            f"{type(self).__name__} is deprecated and will be removed in a future release. "
+            "Use GaussianUpCrossings (or GaussianCrossings) and pass the time scale to the "
+            "covariance function, e.g. tau=...",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.tau = 1.0 if tau is None else tau
         value = torch.as_tensor(self.tau, dtype=torch.float64)
         if value.numel() != 1 or not bool(torch.isfinite(value) & (value > 0)):

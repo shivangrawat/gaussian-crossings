@@ -13,6 +13,7 @@ CASES = json.loads((Path(__file__).parent / "fixtures/legacy_statistics.json").r
 
 
 @pytest.mark.filterwarnings("ignore:Nonfinite small-lag samples:RuntimeWarning")
+@pytest.mark.filterwarnings("ignore:GaussianUpCrossingsDimless.*is deprecated:DeprecationWarning")
 @pytest.mark.parametrize(
     "case", CASES, ids=lambda c: f"{c['class']}-{c['correlation']}-{c['parameters']}-u{c['u']}"
 )

@@ -12,6 +12,7 @@ import math
 import warnings
 from typing import Any, Callable, Optional, Tuple, Union
 
+import numpy as np
 import torch
 from torch.func import grad
 
@@ -39,6 +40,7 @@ class GaussianUpCrossings:
     crossings (via the Kac-Rice formula), the exact variance (via the single-
     integral formula of Theorem III.1), and the Fano factor for upcrossings,
     downcrossings, and total crossings at an arbitrary threshold level u.
+    ``GaussianCrossings`` is the same class under a shorter name.
 
     The mean crossing rate depends only on the local properties r(0) and
     r''(0), whereas the variance and Fano factor encode the full correlation
@@ -46,6 +48,20 @@ class GaussianUpCrossings:
     and mean, without establishing that the crossing process is Poisson.
     Values below or above 1 indicate underdispersion or overdispersion,
     respectively, relative to Poisson counts.
+
+    Recommended interface:
+        ``mean_rate(u, kind)``, ``mean(T, u, kind)``, ``variance(T, u, kind)``,
+        ``variance_rate(u, kind)``, and ``fano_factor(u, T=None, kind)``, with
+        ``kind`` one of ``"up"``, ``"down"``, or ``"total"``. ``T=None`` in
+        ``fano_factor`` gives the long-time limit; a finite ``T`` gives the
+        variance-to-mean ratio of counts in windows of that length, which is the
+        quantity to compare with data. These methods return a Python float for a
+        scalar threshold and a NumPy array otherwise.
+
+        The older ``upcrossing_*``, ``downcrossing_*``, and ``crossing_*``
+        methods remain available and return PyTorch tensors; use them with
+        ``method="trapezoid"`` when gradients are needed. In their names,
+        ``_CLT`` denotes the long-time limit.
 
     Numerical integration:
         Variance and Fano methods default to ``method="adaptive"``. They accept
@@ -116,6 +132,134 @@ class GaussianUpCrossings:
                     f"{name} must be a finite positive scalar. Crossing formulae require "
                     "a nondegenerate smooth process; ordinary OU noise is not smooth."
                 )
+
+    def __repr__(self) -> str:
+        kernel = getattr(self.r_func, "__name__", repr(self.r_func))
+        arguments = [repr(value) for value in self.args]
+        arguments += [f"{key}={value!r}" for key, value in self.kwargs.items()]
+        return f"{type(self).__name__}({', '.join([kernel, f'u={self.u!r}', *arguments])})"
+
+    # ------------------------------------------------------------------
+    # Recommended interface: one method per statistic, NumPy outputs.
+    # ------------------------------------------------------------------
+
+    _KINDS = {
+        "up": "upcrossing",
+        "upcrossing": "upcrossing",
+        "upcrossings": "upcrossing",
+        "down": "downcrossing",
+        "downcrossing": "downcrossing",
+        "downcrossings": "downcrossing",
+        "total": "crossing",
+        "all": "crossing",
+        "crossing": "crossing",
+        "crossings": "crossing",
+    }
+
+    def _statistic(self, name: str, kind: str):
+        try:
+            prefix = self._KINDS[str(kind).lower()]
+        except KeyError:
+            raise ValueError("kind must be 'up', 'down', or 'total'") from None
+        return getattr(self, f"{prefix}_{name}")
+
+    def _threshold(self, u):
+        return torch.as_tensor(self.u if u is None else u, dtype=torch.float64)
+
+    @staticmethod
+    def _to_numpy(value):
+        if isinstance(value, torch.Tensor):
+            value = value.detach().cpu().numpy()
+        array = np.asarray(value, dtype=float)
+        return float(array) if array.ndim == 0 else array
+
+    def mean_rate(self, u=None, kind: str = "up"):
+        """Mean number of crossings per unit time (Kac-Rice formula).
+
+        Args:
+            u: Threshold(s). Defaults to the threshold stored in the model.
+            kind: ``"up"``, ``"down"``, or ``"total"`` crossings.
+
+        Returns:
+            A float for a scalar threshold, otherwise a NumPy array.
+        """
+        return self._to_numpy(self._statistic("mean_rate", kind)(u=self._threshold(u)))
+
+    def mean(self, T: float, u=None, kind: str = "up"):
+        """Mean number of crossings in a window of length ``T``.
+
+        Args:
+            T: Window length, in the time units of the covariance.
+            u: Threshold(s). Defaults to the threshold stored in the model.
+            kind: ``"up"``, ``"down"``, or ``"total"`` crossings.
+
+        Returns:
+            A float for a scalar threshold, otherwise a NumPy array.
+        """
+        return self._to_numpy(self._statistic("mean", kind)(T, u=self._threshold(u)))
+
+    def variance(self, T: float, u=None, kind: str = "up", **integration_options):
+        """Variance of the number of crossings in a window of length ``T``.
+
+        Args:
+            T: Window length, in the time units of the covariance.
+            u: Threshold(s). Defaults to the threshold stored in the model.
+            kind: ``"up"``, ``"down"``, or ``"total"`` crossings.
+            **integration_options: ``method``, ``epsabs``, ``epsrel``, ``limit``,
+                and ``cutoff``; see the class notes.
+
+        Returns:
+            A float for a scalar threshold, otherwise a NumPy array.
+        """
+        statistic = self._statistic("variance", kind)
+        return self._to_numpy(statistic(T, u=self._threshold(u), **integration_options))
+
+    def variance_rate(self, u=None, kind: str = "up", **integration_options):
+        """Long-time variance per unit time, ``lim Var[N(T)] / T`` as ``T`` grows.
+
+        Args:
+            u: Threshold(s). Defaults to the threshold stored in the model.
+            kind: ``"up"``, ``"down"``, or ``"total"`` crossings.
+            **integration_options: ``method``, ``epsabs``, ``epsrel``, ``limit``,
+                and ``cutoff``; see the class notes.
+
+        Returns:
+            A float for a scalar threshold, otherwise a NumPy array.
+        """
+        statistic = self._statistic("variance_CLT_per_unit_time", kind)
+        return self._to_numpy(statistic(u=self._threshold(u), **integration_options))
+
+    def fano_factor(
+        self, u=None, T: Optional[float] = None, kind: str = "up", **integration_options
+    ):
+        """Fano factor ``Var[N] / E[N]`` of crossing counts.
+
+        With ``T=None`` this is the long-time limit. With a finite ``T`` it is
+        the variance-to-mean ratio of counts in windows of length ``T``, which
+        is what an estimate from data windows measures; the two can differ
+        noticeably when ``T`` is only a few correlation times long.
+
+        Args:
+            u: Threshold(s). Defaults to the threshold stored in the model.
+            T: Window length, or None for the long-time limit.
+            kind: ``"up"``, ``"down"``, or ``"total"`` crossings. In the
+                long-time limit the total-crossing Fano factor is twice the
+                upcrossing one, because up- and downcrossings alternate.
+            **integration_options: ``method``, ``epsabs``, ``epsrel``, ``limit``,
+                and ``cutoff``; see the class notes.
+
+        Returns:
+            A float for a scalar threshold, otherwise a NumPy array.
+        """
+        if T is None:
+            value = self._statistic("fano_factor_CLT", kind)(
+                u=self._threshold(u), **integration_options
+            )
+        else:
+            value = self._statistic("fano_factor", kind)(
+                T, u=self._threshold(u), **integration_options
+            )
+        return self._to_numpy(value)
 
     def r(self, t: torch.Tensor) -> torch.Tensor:
         """Evaluate the correlation function r at the given time(s).
@@ -1124,3 +1268,7 @@ class GaussianUpCrossings:
         ) - (1 / (torch.pi**2)) * (q0 / r0)
 
         return final_integral
+
+
+# Shorter name for the same class: it handles up-, down-, and total crossings.
+GaussianCrossings = GaussianUpCrossings

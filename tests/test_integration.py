@@ -22,6 +22,10 @@ from gaussian_crossings.process import (
     r_squared_exp,
 )
 
+pytestmark = pytest.mark.filterwarnings(
+    "ignore:GaussianUpCrossingsDimless.*is deprecated:DeprecationWarning"
+)
+
 ROOT = Path(__file__).resolve().parents[1]
 REF = json.loads((ROOT / "tests/fixtures/paper_reference.json").read_text())
 SPEC = importlib.util.spec_from_file_location("reference_pre", ROOT / "paper/pre_figures.py")

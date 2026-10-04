@@ -1,8 +1,9 @@
 """Compatibility implementation of the original thresholded quadrature.
 
-New work should use GaussianUpCrossingsDimless. This class keeps the old
-sample-magnitude cutoff and endpoint defaults so existing results remain
-reproducible; its numerical rule is not used for the paper figures.
+Deprecated: new work should use GaussianUpCrossings (or GaussianCrossings).
+This class keeps the old sample-magnitude cutoff and endpoint defaults so
+existing results remain reproducible; its numerical rule is not used for the
+paper figures.
 """
 
 import torch
@@ -11,7 +12,11 @@ from .formula_dimless import GaussianUpCrossingsDimless
 
 
 class GaussianUpCrossingsDimless_minimal(GaussianUpCrossingsDimless):
-    """Legacy dimensionless implementation with magnitude-filtered samples."""
+    """Legacy dimensionless implementation with magnitude-filtered samples.
+
+    .. deprecated:: 0.2.0
+        Use :class:`GaussianUpCrossings` (or ``GaussianCrossings``).
+    """
 
     _default_integration_method = "trapezoid"
 

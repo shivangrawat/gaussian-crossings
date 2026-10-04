@@ -11,6 +11,10 @@ from gaussian_crossings.formula.formula_dimless import GaussianUpCrossingsDimles
 from gaussian_crossings.formula.integration import sdho_parts
 from gaussian_crossings.utils import simulate_gaussian_process_cholesky
 
+pytestmark = pytest.mark.filterwarnings(
+    "ignore:GaussianUpCrossingsDimless.*is deprecated:DeprecationWarning"
+)
+
 
 @pytest.mark.parametrize(
     "kernel,params",

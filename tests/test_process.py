@@ -66,3 +66,62 @@ def test_matern_half_integer_derivatives(nu):
     assert model.upcrossing_mean_rate().item() == pytest.approx(
         math.sqrt(nu / (nu - 1)) / (2 * math.pi)
     )
+
+
+@pytest.mark.parametrize(
+    "model_type,acf",
+    [(process.FilteredOU, process.r_filtered_OU), (process.OUNoise, process.r_OU_noise)],
+)
+@pytest.mark.parametrize(
+    "kappa",
+    [1 - 1e-4, 1 - 1e-8, np.nextafter(1.0, 0.0), np.nextafter(1.0, 2.0), 1 + 1e-8, 1 + 1e-4],
+)
+def test_near_equal_ou_time_scales_match_linear_system(model_type, acf, kappa):
+    import mpmath as mp
+
+    # Use high precision for the matrix exponential: the triangular double-
+    # precision shortcut itself cancels when the drift eigenvalues nearly coincide.
+    tau, sigma = 0.7, 1.2
+    dynamics = model_type(tau_e=tau, tau_f=kappa * tau, sigma=sigma)
+    A = dynamics.J.numpy()
+    diffusion = dynamics.noise_vector().numpy()
+    covariance = solve_continuous_lyapunov(A, -np.outer(diffusion, diffusion))
+    for lag in (0.05, 0.5, 3.0):
+        t = torch.tensor(lag, dtype=torch.float64, requires_grad=True)
+        r = acf(t, sigma=sigma, tau=tau, kappa=kappa)
+        p = torch.autograd.grad(r, t, create_graph=True)[0]
+        q = -torch.autograd.grad(p, t)[0]
+        with mp.workdps(60):
+            propagator = np.array(mp.expm(mp.matrix((A * lag).tolist())).tolist(), dtype=float)
+        propagated = propagator @ covariance
+        expected = [propagated[1, 1], (A @ propagated)[1, 1], -(A @ A @ propagated)[1, 1]]
+        np.testing.assert_allclose([r.item(), p.item(), q.item()], expected, rtol=2e-13, atol=2e-14)
+
+
+@pytest.mark.parametrize("acf,driven", [(process.r_filtered_OU, False), (process.r_OU_noise, True)])
+@pytest.mark.parametrize("offset", [-1e-8, 1e-8])
+def test_near_equal_ou_origin_and_parameter_gradients(acf, driven, offset):
+    from gaussian_crossings import GaussianUpCrossings
+
+    sigma, tau = 1.2, 0.7
+    kappa = torch.tensor(1 + offset, dtype=torch.float64, requires_grad=True)
+    model = GaussianUpCrossings(acf, sigma=sigma, tau=tau, kappa=kappa)
+    k = kappa.item()
+    r0 = sigma**2 * (k if driven else 1) / (1 + k)
+    q0 = sigma**2 / (tau**2 * (1 + k) * (1 if driven else k))
+    assert model.r0.item() == pytest.approx(r0, rel=2e-14)
+    assert model.q(0).item() == pytest.approx(q0, rel=2e-14)
+    dr0 = torch.autograd.grad(model.r0, kappa)[0]
+    dq0 = torch.autograd.grad(model.q(0), kappa)[0]
+    expected_dr0 = sigma**2 / (1 + k) ** 2 * (1 if driven else -1)
+    expected_dq0 = -(sigma**2) / (tau**2 * (1 + k) ** 2)
+    if not driven:
+        expected_dq0 *= (1 + 2 * k) / k**2
+    assert dr0.item() == pytest.approx(expected_dr0, rel=2e-13)
+    assert dq0.item() == pytest.approx(expected_dq0, rel=2e-13)
+
+
+@pytest.mark.parametrize("acf", [process.r_filtered_OU, process.r_OU_noise])
+def test_equal_ou_time_scales_still_require_limiting_callback(acf):
+    with pytest.raises(ValueError, match="kappa=1"):
+        acf(0.5, sigma=1.0, tau=1.0, kappa=1.0)

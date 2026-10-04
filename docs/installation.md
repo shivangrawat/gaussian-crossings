@@ -43,8 +43,9 @@ For example, `pip install "gaussian-crossings[notebooks]"`.
 ```bash
 git clone https://github.com/shivangrawat/gaussian-crossings.git
 cd gaussian-crossings
-uv sync --all-extras          # or: pip install -e ".[dev,notebooks]"
+uv sync --all-extras          # or: pip install -e ".[dev,notebooks,docs,reproduce]"
 uv run pytest                 # or: python -m pytest
 ```
 
-Build the documentation locally with `uv run mkdocs serve`.
+Preview the documentation locally with `uv run mkdocs serve`, or
+`python -m mkdocs serve` after the pip installation above.

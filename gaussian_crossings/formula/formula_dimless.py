@@ -25,8 +25,9 @@ def _accepts_keyword(fn: Callable[..., Any], name: str) -> bool:
 class GaussianUpCrossingsDimless(GaussianUpCrossings):
     """Evaluate a covariance at unit ``tau`` and restore physical time units.
 
-    ``r_func`` is called with ``tau=1``. Its amplitude and other parameters
-    are unchanged. Rates scale as ``1/tau``, finite windows use ``T/tau``,
+    If ``r_func`` accepts a ``tau`` keyword, it is called with ``tau=1``;
+    otherwise it is evaluated with its supplied parameters. Its amplitude
+    and other parameters are unchanged. Rates scale as ``1/tau``, finite windows use ``T/tau``,
     and asymptotic Fano factors are independent of the overall time scale.
     Integrand arguments are dimensionless lags. ``tau=None`` means unit time.
 
@@ -36,9 +37,12 @@ class GaussianUpCrossingsDimless(GaussianUpCrossings):
 
     .. deprecated:: 0.2.0
         Use :class:`GaussianUpCrossings` (also available as
-        ``GaussianCrossings``) and pass the time scale to the covariance
-        function, for example ``tau=...``; long-time Fano factors do not depend
-        on it.
+        ``GaussianCrossings``). For a covariance with a ``tau`` parameter,
+        pass the former external time scale directly as ``tau=...``. For
+        a covariance without one, such as the oscillator, wrap it as
+        ``lambda t: r_func(t / tau, **params)`` to preserve the time rescaling
+        and amplitude. A pure time rescaling leaves long-time Fano factors
+        unchanged, but changes rates and finite-window results.
     """
 
     def __init__(
@@ -51,8 +55,8 @@ class GaussianUpCrossingsDimless(GaussianUpCrossings):
     ) -> None:
         warnings.warn(
             f"{type(self).__name__} is deprecated and will be removed in a future release. "
-            "Use GaussianUpCrossings (or GaussianCrossings) and pass the time scale to the "
-            "covariance function, e.g. tau=...",
+            "Use GaussianUpCrossings (or GaussianCrossings): pass tau to the covariance "
+            "where supported, or rescale t/tau in a covariance callback.",
             DeprecationWarning,
             stacklevel=2,
         )

@@ -15,7 +15,8 @@ It is separate from the package and its user [tutorials](../examples/README.md).
 
 Three of the original figure notebooks use the deprecated `GaussianUpCrossingsDimless` class
 and show a `DeprecationWarning` when re-run; this is expected. `PRE_regenerated_figures.ipynb`
-uses the current interface.
+uses the current interface. The historical notebooks retain their numerical code and saved
+outputs; archival notes and corrected comments explain how they differ from the current workflow.
 
 The exact code used for the revised manuscript is tagged
 [`pre-revision-2026-09-27`](https://github.com/shivangrawat/gaussian-crossings/tree/pre-revision-2026-09-27).

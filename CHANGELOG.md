@@ -12,7 +12,7 @@ All notable changes to this project are documented here. The project follows
   `kind="up" | "down" | "total"`. `fano_factor(u, T=None)` gives the long-time limit and a finite
   `T` gives the ratio for windows of that length. They return floats or NumPy arrays.
 - `windowed_counts` and `empirical_fano` for estimating Fano factors from sampled data, with
-  bootstrap confidence intervals and a `CoarseSamplingWarning` when sampling misses crossings.
+  bootstrap confidence intervals and a heuristic `CoarseSamplingWarning` based on downsampling.
 - `gaussian_crossings.plotting` for optional plotting helpers.
 - Four executed tutorials with artificial data, a documentation site, and a release workflow for
   PyPI.
@@ -33,6 +33,16 @@ All notable changes to this project are documented here. The project follows
 
 ### Fixed
 
+- `q(0)` now follows the right-hand derivative convention used by `q0`, including covariance
+  callbacks written with `abs(t)`.
+- OU-driven covariances accept representable `kappa` values close to one and evaluate nearby
+  unequal time scales without subtracting nearly equal exponentials.
+- `MidpointNormalize` honors clipping, preserves masks, and supplies an inverse consistent with
+  its asymmetric and one-sided color scales. Equal bounds support constant-data plots.
+- The figure-comparison report reads numerical validation errors from the selected archive and
+  resolves relative paths before compiling from the manuscript checkout.
+- Documentation and tutorials clarify model assumptions, mean-centered thresholds, bootstrap
+  dependence, sampling diagnostics, and the historical reproduction workflow.
 - The overdamped oscillator covariance lost precision near critical damping, and long-time Fano
   factors failed for damping ratios such as `1 + 1e-12`.
 - With `method="trapezoid"`, the original variance and Fano methods broadcast an array of
@@ -43,7 +53,8 @@ All notable changes to this project are documented here. The project follows
 ### Deprecated
 
 - `GaussianUpCrossingsDimless` and `GaussianUpCrossingsDimless_minimal`. Use `GaussianCrossings`
-  and pass the time scale to the covariance function.
+  and pass `tau` to covariances that support it; otherwise wrap the callback to evaluate at
+  `t / tau`.
 
 ## 0.1.0 (2026-09-27)
 

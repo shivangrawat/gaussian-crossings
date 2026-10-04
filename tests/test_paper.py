@@ -81,3 +81,59 @@ def test_cached_archive_verification_rejects_changed_source(tmp_path):
     (tmp_path / "run_source.py").write_text(source.read_text() + "\n# changed\n")
     with pytest.raises(RuntimeError, match="source hash"):
         PRE.verify_archive(tmp_path)
+
+
+@pytest.mark.parametrize("relative_paths", [False, True])
+def test_comparison_reports_the_selected_archives_validation(tmp_path, monkeypatch, relative_paths):
+    import subprocess
+
+    archive = tmp_path / "archive"
+    archive.mkdir()
+    (archive / "comparisons.json").write_text(json.dumps(REF))
+    (archive / "validation.json").write_text(
+        json.dumps(
+            {
+                "current_package_integrand_max_abs_error": 1.2345e-8,
+                "positive_full_integral_max_abs_error": 7.949196856316121e-14,
+                "sdho_cutoff_and_tolerance_max_change": 3.5678e-7,
+                "rq_2048_to_4096_max_change": 4.6789e-6,
+            }
+        )
+    )
+    figures = tmp_path / "figures" / "publication"
+    report_build = figures.parent / "build" / "figure_comparison"
+    manuscript = tmp_path / "manuscript"
+    manuscript.mkdir()
+
+    def compile_report(command, **kwargs):
+        working_dir = Path(kwargs["cwd"]).resolve()
+        assert working_dir == manuscript
+        source = working_dir / command[-1]
+        assert source == report_build / "figure_comparison.tex"
+        assert source.is_file()
+        output_argument = next(
+            arg.removeprefix("-outdir=") for arg in command if arg.startswith("-outdir=")
+        )
+        effective_build = working_dir / output_argument
+        assert effective_build == report_build
+        (effective_build / "figure_comparison.pdf").write_bytes(b"test PDF")
+        return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(PRE.subprocess, "run", compile_report)
+    arguments = (archive, figures, manuscript)
+    if relative_paths:
+        monkeypatch.chdir(tmp_path)
+        arguments = tuple(path.relative_to(tmp_path) for path in arguments)
+    report = PRE.comparison(*arguments)
+    text = (report_build / "figure_comparison.tex").read_text()
+    for expected in (
+        r"1.235\times10^{-8}",
+        r"7.949\times10^{-14}",
+        r"3.568\times10^{-7}",
+        r"4.679\times10^{-6}",
+    ):
+        assert expected in text
+    assert "@FULL_INTEGRAL_ERROR@" not in text
+    assert report.is_absolute()
+    assert report == figures.parent / "figure_comparison.pdf"
+    assert report.read_bytes() == b"test PDF"

@@ -1,4 +1,4 @@
-"""Reproduce the six PRE figures and the supplementary integration schematic.
+"""Reproduce PRE Figures 2-6 and export alternatives for Figure 1 and Figure S1.
 
 Original notebooks and parameter choices are recorded in NOTEBOOKS.  The old
 notebooks are retained as historical sources.  This runner uses signed-erf
@@ -741,6 +741,9 @@ def plot(output,destination):
 
 def comparison(output,destination,paper):
     """Build the review-only old/new PDF; no manuscript/rebuttal text is edited."""
+    output = Path(output).resolve()
+    destination = Path(destination).resolve()
+    paper = Path(paper).resolve()
     report_build = destination.parent/'build/figure_comparison'
     report_build.mkdir(parents=True,exist_ok=True)
     results = json.loads((output/'comparisons.json').read_text())
@@ -755,12 +758,15 @@ def comparison(output,destination,paper):
 \newcommand{\reporttitle}[1]{{\color{heading}\LARGE\bfseries #1}\par\vspace{6pt}}
 \begin{document}
 \reporttitle{PRE figure regeneration: results and interpretation}
-Review copy, 27 September 2026. Six main-text figures and Supplemental Fig.~S1 regenerated.
-The manuscript and rebuttal prose have not been revised in this pass.
+Comparison with the manuscript revision dated 27 September 2026. Figures 2--6 are regenerated;
+Figure 1 and Supplemental Fig.~S1 are alternative illustrations. Numerical validation values
+below come from the selected archive. The manuscript and rebuttal prose are unchanged.
 
 \textbf{What the notebook audit establishes.}
 The original quantitative notebooks import formula classes that now preserve the signed error-function argument.
-Their default fixed-grid quadrature still needs numerical care; the temperature notebook includes the undefined
+The standard dimensional and dimensionless classes default to adaptive integration;
+only \texttt{GaussianUpCrossingsDimless\_minimal} retains fixed-grid quadrature.
+The temperature notebook includes the undefined
 $\vartheta=0$ endpoint, and the OU notebook's figure-export commands are commented out.
 The new runner retains the original physical ranges and curve sets, with refined heatmaps, stable small-lag
 covariances, adaptive quadrature and explicit tail checks. A new notebook orchestrates the checked calculation.
@@ -801,12 +807,13 @@ The larger-$\alpha$ maxima are small but exceed the numerical refinement errors.
 All five curves start below one at $u=0$.
 \end{minipage}
 
-\textbf{Validation.} Both original formula classes agree with the stable integrand to better than
-$1.2\times10^{-14}$ in the checked cases. Independent positive conditional-Gaussian integration agrees
-with representative full Fano integrals to $2.0\times10^{-14}$.
-SDHO cutoff/tolerance refinement changes checked curves by less than $4.5\times10^{-15}$;
-doubling the rational-quadratic cutoff from 2048 to 4096 changes the curves by less than
-$3.2\times10^{-13}$ with the analytic tail correction. These are observed numerical checks, not rigorous error bounds.
+\textbf{Validation.} The archive records these maximum absolute differences (rounded):
+the original formula classes versus the stable integrand, $@PACKAGE_ERROR@$;
+independent positive conditional-Gaussian integration versus representative full Fano integrals,
+$@FULL_INTEGRAL_ERROR@$. SDHO cutoff/tolerance refinement changes checked curves by
+$@SDHO_REFINEMENT@$; doubling the rational-quadratic cutoff from 2048 to 4096 changes the
+curves by $@RQ_REFINEMENT@$ with the analytic tail correction.
+These are observed numerical checks, not rigorous error bounds.
 The existing Fig.~3 archive's counts, hashes and statistics were verified; its revised curves are unchanged.
 
 \textbf{Interpretation of the finite-level maximum.}
@@ -821,6 +828,14 @@ from those images. The original images' exact execution environment is not recov
 The regenerated figures retain the bold borders, Computer Modern labels and bare bold panel letters.
 Colorbar limits are printed explicitly; compare values against $F=1$, not just color saturation.
 '''
+    for placeholder, key in {
+        '@PACKAGE_ERROR@': 'current_package_integrand_max_abs_error',
+        '@FULL_INTEGRAL_ERROR@': 'positive_full_integral_max_abs_error',
+        '@SDHO_REFINEMENT@': 'sdho_cutoff_and_tolerance_max_change',
+        '@RQ_REFINEMENT@': 'rq_2048_to_4096_max_change',
+    }.items():
+        coefficient, exponent = f'{check[key]:.3e}'.split('e')
+        closing = closing.replace(placeholder, rf'{coefficient}\times10^{{{int(exponent)}}}')
     sections = [
         ('1','upcrossing_description',False,
          r'The same SDHO parameters and level are used ($\zeta=0.5$, $\omega_0=\vartheta=1$, $u=1$, $T=40$). '
@@ -884,10 +899,18 @@ Colorbar limits are printed explicitly; compare values against $F=1$, not just c
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', choices=['validate', 'calculate', 'plot', 'comparison', 'all'])
-    parser.add_argument('--output', type=Path, default=ROOT / 'data/pre_figures_adaptive')
-    parser.add_argument('--figures', type=Path, default=ROOT / 'figures/publication')
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        epilog='Run from a repository checkout; see docs/reproducibility.md for the workflow.')
+    parser.add_argument('action', choices=['validate', 'calculate', 'plot', 'comparison', 'all'],
+                        help='validate: check formulas and restored Figure 3 inputs; calculate: save '
+                             'arrays; plot: export cached arrays; comparison: compare exported '
+                             'figures with manuscript images; all: calculate and plot')
+    parser.add_argument('--output', type=Path, default=ROOT / 'data/pre_figures_adaptive',
+                        help='Analytical archive directory; Figure 3 inputs are read from '
+                             'data/pre_figure3_10000 in the checkout')
+    parser.add_argument('--figures', type=Path, default=ROOT / 'figures/publication',
+                        help='Figure PDF directory; comparison builds under its parent/build directory')
     parser.add_argument('--paper', type=Path, help='Manuscript checkout; only needed for comparison')
     parser.add_argument('--reference', type=Path, help='Compare all numerical points to this reference archive')
     parser.add_argument('--historical', action='store_true',

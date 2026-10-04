@@ -13,27 +13,30 @@ Variance and Fano-factor methods accept these keyword options:
 | `method` | `"adaptive"` | Adaptive quadrature, or `"trapezoid"` for the original fixed-grid rule |
 | `epsabs`, `epsrel` | `2e-10`, `2e-10` | Absolute and relative tolerances, in units of the Fano factor |
 | `limit` | `1200` | Maximum number of adaptive subintervals |
-| `cutoff` | model-specific | Initial tail cutoff in normalized lag $t\sqrt{q_0/r_0}$; built-in covariances only |
+| `cutoff` | model-specific | Initial long-time tail cutoff in normalized lag $t\sqrt{q_0/r_0}$; SDHO/OU-driven, rational-quadratic, squared-exponential, and Matérn `nu = 1.5` strategies only |
 
-After a call, `model.last_integration_info` reports the covariance strategy, the quadrature
+After a successful adaptive variance/Fano calculation, `model.last_integration_info` reports the covariance strategy, the quadrature
 error estimate, the change produced by extending the tail cutoff, the number of function
 evaluations, and the final cutoff. These are estimates, not rigorous bounds. Errors are
 expressed in Fano-factor units even for variance methods; multiply by the mean count or rate for
-the corresponding variance error.
+the corresponding variance error. It is `None` for trapezoid calculations and zero-duration
+variance calls. A finite-window calculation uses its duration as the integration endpoint;
+the `cutoff` option is only relevant to a long-time calculation.
 
 ## How the integrand is evaluated
 
 The evaluator combines exponential factors, keeps the sign of the error-function argument, and
 factors the cancelling covariance differences at small lags.
 
-- **Built-in covariances** (damped oscillator, both Ornstein–Uhlenbeck-driven forms,
-  rational-quadratic, squared-exponential) use explicit normalized expressions and series at small
+- **Dedicated strategies** (damped oscillator, both Ornstein–Uhlenbeck-driven forms,
+  rational-quadratic, squared-exponential, Matérn `nu = 1.5`) use explicit normalized expressions and series at small
   lags. Their long-time tails are checked by extending the cutoff; rational-quadratic tails include
   an asymptotic correction, and non-integrable cases are rejected.
-- **Custom covariances** use a right-hand Taylor expansion obtained by automatic differentiation
+- **Custom covariances and Matérn `nu = 2.5`** use a right-hand Taylor expansion obtained by automatic differentiation
   through order 14. It is checked for local convergence and for agreement with the callback, and
-  is followed by adaptive integration over the half-line. A covariance without a reliable local
-  expansion raises an explanatory error. Building the expansion takes several seconds per call.
+  is followed by adaptive integration over the requested finite window or, for a long-time
+  result, the half-line. A covariance without a reliable local expansion raises an explanatory
+  error. Building the expansion can take several seconds per variance/Fano call.
 
 These checks cannot establish the smoothness, nondegeneracy, or integrability assumptions for an
 arbitrary covariance; that remains the user's responsibility.
@@ -57,14 +60,20 @@ $\mathrm{Var}[N_u(T)] = 4\,\mathrm{Var}[N^\uparrow_u(T)] - P_T$, where $P_T$ is 
 that $X_0$ and $X_T$ lie on opposite sides of $u$. It is integrated in a scaled form that avoids
 underflow, and gives a long-time total-crossing Fano factor of exactly twice the upcrossing one.
 The closed-form total-crossing integrand is available as `crossing_integrand`.
+Direct integrand methods, including their mean-level variants, require strictly positive lags;
+their closed forms are singular at zero. The integrated methods handle that endpoint internally.
 
 ## Edge cases
 
 - A window of length `T = 0` has zero variance and an undefined Fano factor; adaptive Fano
   methods reject it.
-- The two Ornstein–Uhlenbeck-driven covariances require `kappa != 1`; supply the limiting
-  covariance as a custom function for that case.
+- The two Ornstein–Uhlenbeck-driven covariances require `kappa != 1`. This is a removable
+  singularity of their parametrized expression, not an invalid process. For equal time scales,
+  supply the limit `sigma**2 / 2 * (1 + abs(t) / tau) * torch.exp(-abs(t) / tau)` as a custom
+  covariance. Nearby unequal time scales use an expression that avoids cancellation.
 - Critical and near-critical damping of the oscillator are evaluated without cancellation.
+- `q(0)` uses the same right-hand evaluation as `q0`, at lag `1e-40`, to avoid the artificial
+  autograd cusp in covariance callbacks written with `abs(t)`.
 
 ## Simulation and counting conventions
 

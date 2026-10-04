@@ -34,19 +34,28 @@ Parameters are passed by name and forwarded to the covariance function. Unknown 
   correlations.
 - `r_squared_exp`: $\sigma^2 e^{-t^2/(2\tau^2)}$.
 
-The oscillator, both Ornstein–Uhlenbeck-driven forms, and the rational-quadratic and
-squared-exponential covariances use dedicated, numerically stable expressions and are fast:
-a long-time Fano factor takes tens of milliseconds, even for many thresholds at once.
+The oscillator, both Ornstein–Uhlenbeck-driven forms, rational-quadratic, squared-exponential,
+and Matérn `nu = 1.5` covariances use dedicated, numerically stable expressions. Evaluate many
+thresholds in one call to share their adaptive integration. Runtime depends on the parameters,
+thresholds, and requested tolerances. Matérn `nu = 2.5` uses the generic expansion described below.
 
 ## Writing your own
 
-Any function `r(t, **params)` can be used if it
+For a custom function `r(t, **params)`, distinguish the mathematical assumptions from the
+requirements of the numerical method:
 
-1. uses **PyTorch** operations (`torch.exp`, `torch.cos`, ...) and returns a tensor, because
+1. Use **PyTorch** operations (`torch.exp`, `torch.cos`, ...) and return a tensor, because
    $r'(t)$ and $r''(t)$ are obtained by automatic differentiation;
-2. is a valid stationary covariance: even in `t` and positive definite;
-3. describes a **smooth** process, with a finite $r''(0)$;
-4. decays at large lags, if you need long-time results.
+2. Supply a valid stationary covariance, even in `t` and positive semidefinite.
+3. The process must satisfy the smoothness, Geman, and joint nondegeneracy assumptions in
+   [Concepts](concepts.md#when-the-formulas-apply). Finite $-r''(0)>0$ is necessary but is not
+   by itself a guarantee of continuously differentiable sample paths or finite crossing variance.
+4. For a finite long-time variance rate or Fano factor, the excess crossing-pair intensity must be
+   integrable. Mere covariance decay is insufficient: a rational-quadratic covariance with
+   `alpha = 0.4` decays, but its long-time Fano factor diverges at every nonzero threshold.
+5. The default adaptive method additionally needs a checked right-hand covariance expansion
+   through order 14. This numerical requirement is stronger than the smoothness needed by the
+   crossing formula itself; see [Numerical methods](numerics.md).
 
 ```python
 import torch
@@ -55,11 +64,13 @@ def r_quasi_periodic(t, sigma, tau, period):
     return sigma**2 * torch.exp(-0.5 * (t / tau) ** 2) * torch.cos(2 * torch.pi * t / period)
 
 model = GaussianCrossings(r_quasi_periodic, sigma=1.0, tau=3.0, period=2.0)
+levels = [0.0, 0.5, 1.0]
 fano = model.fano_factor(levels)   # pass all thresholds in one call
 ```
 
-For a covariance supplied by the user, each long-time calculation first builds a checked
-small-lag series by automatic differentiation, which takes several seconds. Evaluate many
+For a covariance supplied by the user, each adaptive variance/Fano calculation, whether finite
+window or long-time, first builds a checked small-lag series by automatic differentiation.
+This can take several seconds. Evaluate many
 thresholds in one call rather than in a loop. See
 [tutorial 02](tutorials/02_custom_covariance.ipynb).
 

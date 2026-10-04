@@ -1,11 +1,12 @@
 """Estimate crossing-count statistics from sampled data.
 
 Counts are formed in consecutive, non-overlapping windows of a uniformly
-sampled series. Their variance-to-mean ratio is what the finite-window theory
-``GaussianCrossings.fano_factor(u, T=window)`` predicts. The long-time Fano
-factor is the limit of that prediction as the window grows, and it can differ
-noticeably from the windowed value when windows span only a few correlation
-times.
+sampled series. When sampling resolves the crossings and the model matches
+the data, their variance-to-mean ratio estimates the finite-window prediction
+``GaussianCrossings.fano_factor(u, T=window, kind=kind)`` with a mean-centered
+threshold. The long-time Fano factor is the limit of that prediction as the
+window grows, and it can differ noticeably from the windowed value when
+windows span only a few correlation times.
 """
 
 import warnings
@@ -41,8 +42,8 @@ class CoarseSamplingWarning(UserWarning):
 class FanoEstimate:
     """Fano factor of windowed crossing counts with a bootstrap confidence interval.
 
-    Array-valued fields have one entry per threshold when several thresholds
-    are given; otherwise they are floats.
+    A scalar threshold produces float-valued statistics. An array of thresholds
+    produces arrays with one entry per threshold, including a one-element array.
 
     Attributes:
         fano: Sample variance (``ddof=1``) divided by the mean count per window.
@@ -207,18 +208,26 @@ def empirical_fano(
     """Estimate the Fano factor of crossing counts in windows of length ``window``.
 
     Compare the estimate with the finite-window prediction
-    ``GaussianCrossings.fano_factor(u, T=window)``, not with the long-time
-    limit, unless the window is much longer than the correlation time.
+    ``GaussianCrossings.fano_factor(u, T=estimate.window, kind=kind)``, using
+    the returned window length after rounding to whole sampling steps. The
+    model assumes zero mean: for raw data with mean ``mu``, use ``u - mu`` as
+    its threshold. Use the long-time limit only when its approximation is
+    adequate for the chosen window.
 
     The confidence interval is a percentile bootstrap that resamples whole
-    windows, which keeps the dependence between thresholds. It treats windows
-    as independent; that is accurate when windows are long compared with the
-    correlation time and makes the interval too narrow otherwise.
+    windows, which keeps the dependence between thresholds within each
+    resample. The reported intervals are pointwise, not simultaneous. It
+    treats windows as independent; dependence between windows can make the
+    intervals too narrow or too wide. Long windows or one window per independent
+    realization can support this assumption; check dependence between counts.
 
     Sampling a continuous process misses crossings that happen between
     samples. When ``check_sampling`` is true, the crossings are recounted using
-    every second sample; if that removes more than ``sampling_tolerance`` of
-    them, a :class:`CoarseSamplingWarning` is issued.
+    every second sample over the same observation span. At thresholds with at
+    least 50 detected crossings, a loss larger than ``sampling_tolerance``
+    issues a :class:`CoarseSamplingWarning`. Realizations shorter than three
+    samples cannot be checked. This is a heuristic: both grids can miss events,
+    so absence of a warning does not establish adequate sampling resolution.
 
     Args:
         x: Samples taken at a uniform step ``dt``: one series of shape

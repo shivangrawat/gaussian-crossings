@@ -6,7 +6,8 @@ All three thresholds and nested sampling grids use the same trial paths.
 Run `python paper/damped_harmonic_oscillator/pre_figure3.py --help`.
 Outputs live in the ignored data/pre_figure3 directory; no paths are discarded
 or rerun based on agreement with theory. NumPy/SciPy are the only numerical
-dependencies. See README.md for the run and validation protocol.
+dependencies; plotting also needs Matplotlib and LaTeX. See
+docs/reproducibility.md for the run and validation protocol.
 """
 
 from __future__ import annotations
@@ -456,15 +457,25 @@ def plot(output):
     plt.close(fig)
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', choices=['validate', 'simulate', 'analyze', 'plot'])
-    parser.add_argument('--output', type=Path, default=Path('data/pre_figure3'))
-    parser.add_argument('--trials', type=int, default=5000)
-    parser.add_argument('--dt', type=float, default=0.00125)
-    parser.add_argument('--seed', type=int, default=20260927)
-    parser.add_argument('--batch-size', type=int, default=20)
-    parser.add_argument('--workers', type=int, default=3)
-    parser.add_argument('--bootstrap', type=int, default=10000)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('action', choices=['validate', 'simulate', 'analyze', 'plot'],
+                        help='validate: deterministic checks; simulate: create a fresh ensemble; '
+                             'analyze: save theory, statistics and intervals; plot: export the comparison')
+    parser.add_argument('--output', type=Path, default=Path('data/pre_figure3'),
+                        help='Ensemble directory; simulate requires a new or empty directory')
+    parser.add_argument('--trials', type=int, default=5000,
+                        help='Number of simulated trials at each of the five damping ratios')
+    parser.add_argument('--dt', type=float, default=0.00125,
+                        help='Sampling step in model time units; must divide T=120 with steps divisible by four')
+    parser.add_argument('--seed', type=int, default=20260927,
+                        help='Simulation seed; keep the seed and batch size fixed to reproduce an ensemble')
+    parser.add_argument('--batch-size', type=int, default=20,
+                        help='Trials per seeded simulation batch; affects the generated paths')
+    parser.add_argument('--workers', type=int, default=3,
+                        help='Maximum concurrent damping-ratio simulation workers')
+    parser.add_argument('--bootstrap', type=int, default=10000,
+                        help='Whole-trial bootstrap resamples for analyze')
     args = parser.parse_args()
     if args.action == 'validate':
         print(json.dumps(validate(), indent=2))

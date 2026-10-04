@@ -4,8 +4,8 @@ This module provides the ``GaussianUpCrossings`` class, which implements
 the exact analytical formulae for the mean (Kac-Rice), variance, and Fano
 factor of arbitrary-level upcrossings, downcrossings, and total crossings
 of smooth, stationary Gaussian processes.  The variance and Fano factor
-expressions are derived in Theorems III.1 and III.2 of Rawat, Morone, Heeger, and
-Martiniani (2026) and involve the error function and Owen's T function.
+expressions are derived in Theorems II.1 and II.2 of Rawat, Morone, Heeger, and
+Martiniani (2026, arXiv:2605.25278v1) and involve the error function and Owen's T function.
 """
 
 import math
@@ -43,7 +43,7 @@ class GaussianUpCrossings:
 
     Given a correlation function r(t), this class computes the mean number of
     crossings (via the Kac-Rice formula), the exact variance (via the single-
-    integral formula of Theorem III.1), and the Fano factor for upcrossings,
+    integral formula of Theorem II.1), and the Fano factor for upcrossings,
     downcrossings, and total crossings at an arbitrary threshold level u.
     ``GaussianCrossings`` is the same class under a shorter name.
 
@@ -75,8 +75,10 @@ class GaussianUpCrossings:
         ``last_integration_info`` records error estimates and tail refinement.
         This CPU path is not differentiable. ``method="trapezoid"`` retains the
         historical differentiable grid, endpoint arguments, and return types.
-        Custom covariances need a checked local Taylor expansion through
-        order 14; supplied kernels use dedicated stable expressions.
+        The oscillator, OU-driven, rational-quadratic, squared-exponential,
+        and Matérn nu=1.5 kernels use dedicated stable expressions. Custom
+        covariances and Matérn nu=2.5 need a checked right-hand Taylor
+        expansion through order 14.
 
     Attributes:
         r_func: Correlation function r(t) of the stationary Gaussian process.
@@ -104,9 +106,9 @@ class GaussianUpCrossings:
             **kwargs: Additional keyword arguments to be passed to r_func.
 
         Note:
-            Upon initialization, the class evaluates r0 (correlation at t=0),
-            p0 (first derivative at t=0), and q0 (negative second derivative
-            at t=0).
+            Initialization evaluates r0, sets p0=0 by stationarity, and
+            evaluates q0 using a positive lag of 1e-40 to avoid the artificial
+            autograd cusp of callbacks written with abs(t).
         """
         self.r_func = r_func
         self.u = u
@@ -312,7 +314,11 @@ class GaussianUpCrossings:
     def q(self, t: torch.Tensor) -> torch.Tensor:
         """Evaluate the negative second derivative of r(t).
 
-        This effectively computes q(t) = -r''(t).
+        This computes q(t) = -r''(t). At zero, the derivative is evaluated
+        from the right at lag 1e-40, as for q0, because autograd through
+        abs(t) can otherwise return a spurious zero. Tensor shapes and
+        parameter gradients are preserved; further lag derivatives at the
+        origin follow this right-hand convention.
 
         Args:
             t: A tensor representing time(s) at which to compute the derivative.
@@ -325,7 +331,10 @@ class GaussianUpCrossings:
         def sum_func(t: torch.Tensor) -> torch.Tensor:
             return torch.sum(self.p(t))
 
-        return -grad(sum_func)(t)
+        # Retain the dependence on t in the zero branch so that differentiation
+        # with respect to lag also follows the right-hand derivative convention.
+        evaluation_t = torch.where(t == 0, t + 1e-40, t)
+        return -grad(sum_func)(evaluation_t)
 
     def _alpha(self, t: torch.Tensor) -> torch.Tensor:
         """Compute the auxiliary quantity alpha(t).
@@ -522,13 +531,15 @@ class GaussianUpCrossings:
     ) -> torch.Tensor:
         """Compute the integrand I^+(t) for the upcrossing variance formula.
 
-        Evaluates the closed-form integrand from Theorem III.1 (Eq. 17 of the
+        Evaluates the closed-form integrand from Theorem II.1 (Eq. 17 of the
         paper), which is expressed in terms of the error function and Owen's
         T function via the auxiliary quantities alpha, beta, gamma, and delta.
         The variance is obtained by integrating this quantity over time.
 
         Args:
-            t: Time lag(s) at which to evaluate the integrand.
+            t: Strictly positive time lag(s). The closed form is singular at
+                zero; use the integrated variance/Fano methods to include
+                the origin with their endpoint treatment.
             u: Threshold level. If not provided, uses the instance's u.
 
         Returns:
@@ -577,7 +588,7 @@ class GaussianUpCrossings:
         For stationary Gaussian processes, this equals the upcrossing integrand.
 
         Args:
-            t: A tensor representing time(s) at which to evaluate the integrand.
+            t: Strictly positive time lag(s); the closed form is singular at zero.
             u: The threshold level. If not provided, uses instance's u.
 
         Returns:
@@ -590,13 +601,15 @@ class GaussianUpCrossings:
     ) -> torch.Tensor:
         """Compute the integrand I(t) for the total crossing variance formula.
 
-        Evaluates the closed-form integrand from Theorem III.2 (Eq. 24 of the
+        Evaluates the closed-form integrand from Theorem II.2 (Eq. 24 of the
         paper) for bidirectional crossings, expressed in terms of the error
         function and Owen's T function.  The variance of total crossings is
         obtained by integrating this quantity over time.
 
         Args:
-            t: Time lag(s) at which to evaluate the integrand.
+            t: Strictly positive time lag(s). The closed form is singular at
+                zero; use the integrated variance/Fano methods to include
+                the origin with their endpoint treatment.
             u: Threshold level. If not provided, uses the instance's u.
 
         Returns:
@@ -706,7 +719,7 @@ class GaussianUpCrossings:
     ):
         """Dispatch to adaptive integration or the historical trapezoidal rule.
 
-        t = s/(1-s) maps the positive half-line to (0, 1). This is a
+        t = s/(1-s) maps s in (0, 1) to the positive time half-line. This is a
         fixed-grid approximation, not an adaptive error-controlled integral.
         The historical near-origin correction is retained for compatibility.
         """
@@ -831,9 +844,10 @@ class GaussianUpCrossings:
         num_points: int = 1000,
         **integration_options,
     ) -> torch.Tensor:
-        """Compute variance of upcrossings over time T (CLT formula).
+        """Approximate the variance of upcrossings over a long duration T.
 
-        Multiplies the per unit time variance by T.
+        Multiplies the asymptotic variance rate by T. For the finite-window
+        variance, use upcrossing_variance instead.
 
         Args:
             T: The length of the time interval.
@@ -844,7 +858,7 @@ class GaussianUpCrossings:
             **integration_options: method, epsabs, epsrel, limit, and cutoff; see class notes.
 
         Returns:
-            The variance of upcrossings over time T.
+            T times the asymptotic upcrossing variance rate.
         """
         return T * (
             self.upcrossing_variance_CLT_per_unit_time(
@@ -921,9 +935,10 @@ class GaussianUpCrossings:
         num_points: int = 1000,
         **integration_options,
     ) -> torch.Tensor:
-        """Compute variance of downcrossings over time T (CLT formula).
+        """Approximate the variance of downcrossings over a long duration T.
 
-        For stationary Gaussian processes, this equals the upcrossing variance.
+        This is T times the asymptotic variance rate and equals the
+        upcrossing result. Use downcrossing_variance for a finite window.
 
         Args:
             T: The length of the time interval.
@@ -934,7 +949,7 @@ class GaussianUpCrossings:
             **integration_options: method, epsabs, epsrel, limit, and cutoff; see class notes.
 
         Returns:
-            The variance of downcrossings over time T.
+            T times the asymptotic downcrossing variance rate.
         """
         return self.upcrossing_variance_CLT(
             T,
@@ -1006,9 +1021,10 @@ class GaussianUpCrossings:
         num_points: int = 1000,
         **integration_options,
     ) -> torch.Tensor:
-        """Compute variance of crossings over time T (CLT formula).
+        """Approximate the total-crossing variance over a long duration T.
 
-        Multiplies the per unit time variance by T.
+        Multiplies the asymptotic variance rate by T. For the finite-window
+        variance, use crossing_variance instead.
 
         Args:
             T: The length of the time interval.
@@ -1019,7 +1035,7 @@ class GaussianUpCrossings:
             **integration_options: method, epsabs, epsrel, limit, and cutoff; see class notes.
 
         Returns:
-            The variance of crossings over time T.
+            T times the asymptotic total-crossing variance rate.
         """
         return T * (
             self.crossing_variance_CLT_per_unit_time(
@@ -1228,7 +1244,7 @@ class GaussianUpCrossings:
         Leadbetter and Cryer (1965).
 
         Args:
-            t: Time lag(s) at which to evaluate the integrand.
+            t: Strictly positive time lag(s); the closed form is singular at zero.
 
         Returns:
             The simplified integrand value for mean-level upcrossing variance.
@@ -1256,7 +1272,7 @@ class GaussianUpCrossings:
         For stationary Gaussian processes, equals the upcrossing integrand.
 
         Args:
-            t: A tensor representing time(s) at which to evaluate the integrand.
+            t: Strictly positive time lag(s); the closed form is singular at zero.
 
         Returns:
             The value of the integrand for downcrossings variance at u=0.
@@ -1271,7 +1287,7 @@ class GaussianUpCrossings:
         involving only arctangent terms.
 
         Args:
-            t: Time lag(s) at which to evaluate the integrand.
+            t: Strictly positive time lag(s); the closed form is singular at zero.
 
         Returns:
             The simplified integrand value for mean-level crossing variance.

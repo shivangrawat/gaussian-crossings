@@ -42,9 +42,13 @@ def restore(destination, verify_only=False):
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--destination", type=Path, default=ROOT / "data")
-    parser.add_argument("--verify-only", action="store_true")
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
+    parser.add_argument("--destination", type=Path, default=ROOT / "data",
+                        help="Parent directory for the restored numerical and Figure 3 archives")
+    parser.add_argument("--verify-only", action="store_true",
+                        help="Check bundle checksums and any existing destination files without writing")
     args = parser.parse_args()
     restore(args.destination, args.verify_only)
 

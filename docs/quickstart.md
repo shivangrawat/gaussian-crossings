@@ -13,8 +13,7 @@ from gaussian_crossings.process import r_damped_harmonic_oscillator_noise
 model = GaussianCrossings(r_damped_harmonic_oscillator_noise, temp=1.0, omega0=1.0, zeta=0.5)
 ```
 
-A misspelled parameter raises `TypeError`, so a typo cannot silently describe a different
-process.
+The built-in covariance functions reject misspelled parameters with `TypeError`.
 
 ## Compute statistics
 
@@ -63,8 +62,13 @@ model.fano_factor(0.5, T=estimate.window)                     # matching predict
 
 See [Estimating from data](estimation.md).
 
+The model assumes zero-mean data. If the recording has mean `mu`, compare counts at a physical
+threshold `u` with `model.fano_factor(u - mu, T=estimate.window)`, or center both the recording
+and its threshold before counting.
+
 ## Original method names
 
 Earlier versions exposed methods such as `upcrossing_fano_factor_CLT()` (long-time limit) and
-`crossing_variance(T)`. They are unchanged and return PyTorch tensors. In their names, `_CLT`
-denotes the long-time limit.
+`crossing_variance(T)`. These methods remain available and return PyTorch tensors. With
+`method="trapezoid"`, they require a scalar threshold; the new methods evaluate threshold arrays
+one element at a time. In the original names, `_CLT` denotes the long-time limit.

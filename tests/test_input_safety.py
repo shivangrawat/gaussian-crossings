@@ -86,3 +86,23 @@ def test_model_class_aliases():
     assert process.filtered_OU is process.FilteredOU
     assert process.OU_noise is process.OUNoise
     assert process.damped_harmonic_oscillator_noise is process.DampedHarmonicOscillatorNoise
+
+
+@pytest.mark.parametrize(
+    "kernel,driven", [(process.r_filtered_OU, False), (process.r_OU_noise, True)]
+)
+@pytest.mark.parametrize("offset", [-1e-8, 1e-8])
+def test_near_equal_ou_fano_matches_critical_limit(kernel, driven, offset):
+    sigma, tau, kappa = 1.2, 0.7, 1 + offset
+    model = GaussianUpCrossings(kernel, sigma=sigma, tau=tau, kappa=kappa)
+    critical = GaussianUpCrossings(
+        process.r_damped_harmonic_oscillator_noise, temp=1.0, omega0=1.0, zeta=1.0
+    )
+    variance = sigma**2 * (kappa if driven else 1) / (1 + kappa)
+    level = 0.5 * math.sqrt(variance)
+    # At matched amplitude and natural time scale, the damping ratio differs
+    # from critical by O((kappa - 1)**2), below float64 resolution here.
+    assert model.fano_factor(level) == pytest.approx(critical.fano_factor(0.5), abs=2e-11)
+    assert model.fano_factor(level, T=5 * tau * math.sqrt(kappa)) == pytest.approx(
+        critical.fano_factor(0.5, T=5), abs=2e-11
+    )

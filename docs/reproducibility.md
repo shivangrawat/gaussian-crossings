@@ -6,22 +6,24 @@ numerical Figures 2–6 are produced by `paper/pre_figures.py`, orchestrated by
 `paper/PRE_regenerated_figures.ipynb`. Figure 1 and Supplemental Figure S1 use the original
 illustrations; the runner can export alternatives for those two.
 
-## Exact code used for the paper
+## Historical release and current checkout
 
 The release tag
 [`pre-revision-2026-09-27`](https://github.com/shivangrawat/gaussian-crossings/tree/pre-revision-2026-09-27)
-contains the exact code that produced the figures of the revised manuscript (dated 27 September
-2026), with the scripts under `examples/` and the archive under `reproduction/`. Check it out
-for a byte-for-byte reproduction:
+preserves the numerical inputs and source snapshots used for the revised manuscript (dated
+27 September 2026). To work from that tag, follow its
+[tagged reproduction guide](https://github.com/shivangrawat/gaussian-crossings/blob/pre-revision-2026-09-27/docs/reproducibility.md):
+the scripts there are under `examples/` and the archive is under `reproduction/`.
 
-```bash
-git checkout pre-revision-2026-09-27
-```
+**The commands below use the current `main` layout**, with paper-specific files under `paper/`.
+Restoring the bundled archive recovers its inputs byte for byte, as checked by their hashes.
+Fresh calculations are compared numerically with the archived results using the tolerances
+described below; regenerated output files need not have identical bytes.
 
-Later versions of the package give the same numbers to within the stated integration
-tolerances. Because the runner records hashes of the package source, a cached numerical archive
-made with one version is not re-exported by a version with different source; recalculate into a
-fresh directory instead.
+The current runner records hashes of its source and the package. A cached calculation made with
+different numerical source must be recalculated into a fresh directory before export. The
+original bundled archive has a separate `--historical` export mode, shown below, which verifies
+the preserved source and array checksums.
 
 ## Environment and input data
 
@@ -60,10 +62,16 @@ uv run python paper/damped_harmonic_oscillator/pre_figure3.py simulate \
   --output data/pre_figure3_new --trials 10000 --dt 0.00125 --seed 20260927 --workers 3
 uv run python paper/damped_harmonic_oscillator/pre_figure3.py analyze \
   --output data/pre_figure3_new --bootstrap 10000
+uv run python paper/damped_harmonic_oscillator/pre_figure3.py plot \
+  --output data/pre_figure3_new
 ```
 
 This is the full simulation: stationary initial conditions, exact Gaussian transitions, nested
 sampling grids, and whole-trial bootstrap resampling. The 95% intervals are pointwise.
+The last command exports the new ensemble's comparison to
+`data/pre_figure3_new/sdho_comparison.pdf`. The all-figures runner below continues to use the
+restored manuscript ensemble at `data/pre_figure3_10000`; its `--output` selects the analytical
+results directory, not a different simulation ensemble.
 
 A production run contains `counts_0.npz` through `counts_4.npz` (whole-trial counts for three
 thresholds and three nested grids, plus stationary covariance probes and initial velocities),
@@ -126,7 +134,9 @@ uv run pytest -m reproduction        # full local archive check, or an explicit 
 ## Optional historical comparison
 
 A separate review command compares the original manuscript exports with the revised figures. It
-requires the manuscript checkout and builds under the numerical archive's `build/` directory:
+requires the manuscript checkout and the figures exported by the `plot` command above. With the
+paths below, LaTeX outputs go under `figures/build/figure_comparison/`, and the finished report is
+`figures/figure_comparison.pdf`:
 
 ```bash
 uv run python paper/pre_figures.py comparison \

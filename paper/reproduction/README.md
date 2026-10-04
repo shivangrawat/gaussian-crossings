@@ -6,7 +6,8 @@ analytical arrays, all 50,000 trajectories' crossing counts and covariance
 probes, the Figure 3 bootstrap summary, and the original source snapshots.
 It does not store full sampled trajectories. The original numerical
 metadata are preserved. `manifest.json` records SHA-256 checksums and the
-comparison of numerical function definitions with the maintained scripts.
+source comparison made when the archive was prepared; its `current` paths
+and hashes describe that historical snapshot.
 
 From the repository root:
 
@@ -14,7 +15,7 @@ From the repository root:
 uv sync --all-extras --locked
 uv run python paper/restore_pre_archive.py
 uv run python paper/pre_figures.py plot \
-  --output data/pre_figures_20260927 --figures figures/publication
+  --output data/pre_figures_20260927 --figures figures/publication --historical
 ```
 
 Restoration checks every file before writing and refuses to overwrite
@@ -22,10 +23,13 @@ different local data. Use `--destination /path/to/empty/data` for an isolated
 copy, or `--verify-only` to check without writing. The renderer uses the
 default Figure 3 archive under `data/pre_figure3_10000`.
 
-The maintained scripts differ from the archived snapshots in plotting and
-command handling; their numerical functions are identical. The bundle
-preserves the original snapshots because Figure 3 reanalysis checks the
-complete source hash:
+The maintained runner now computes numerical results through the public
+package, so its numerical functions differ from the archived snapshot.
+`--historical` verifies the preserved source and array checksums and exports
+the original arrays without recalculating them. Fresh calculations can be
+compared numerically with these arrays using the reproduction guide below.
+The bundle preserves the original Figure 3 source because reanalysis checks
+its complete source hash:
 
 ```sh
 uv run python data/pre_figure3_10000/run_source.py analyze \

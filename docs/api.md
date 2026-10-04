@@ -18,7 +18,8 @@ The original methods remain available and return PyTorch tensors:
 `upcrossing_mean_rate`, `upcrossing_mean`, `upcrossing_variance`,
 `upcrossing_variance_CLT_per_unit_time`, `upcrossing_variance_CLT`, `upcrossing_fano_factor`,
 `upcrossing_fano_factor_CLT`, `upcrossing_integrand`, and the corresponding `downcrossing_*` and
-`crossing_*` methods. `_CLT` denotes the long-time limit.
+`crossing_*` methods. Their trapezoid integration requires a scalar threshold; the new methods
+handle arrays by evaluating each threshold separately. `_CLT` denotes the long-time limit.
 
 ::: gaussian_crossings.formula.integration.IntegrationInfo
 
@@ -79,5 +80,8 @@ Requires the `plot` extra.
 ## Deprecated
 
 `GaussianUpCrossingsDimless` and `GaussianUpCrossingsDimless_minimal` evaluate a covariance in
-units of its time scale. They emit `DeprecationWarning`; use `GaussianCrossings` and pass the
-time scale to the covariance function instead.
+units of its time scale. They emit `DeprecationWarning`; use `GaussianCrossings` instead.
+For a covariance that accepts `tau`, pass the former external time scale as `tau=...`.
+Otherwise, preserve the time rescaling with a callback such as
+`lambda t: r_func(t / tau, **params)`. A pure time rescaling leaves long-time Fano factors
+unchanged but changes rates and finite-window results.

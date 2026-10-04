@@ -8,8 +8,9 @@ name: Publish to PyPI
 #   Owner: shivangrawat    Repository name: gaussian-crossings
 #   Workflow name: publish.yml    Environment name: pypi
 #
-# To release: set __version__ in gaussian_crossings/__init__.py, update CHANGELOG.md, and publish
-# a GitHub release whose tag is v<version> (for example v0.2.0).
+# To release: set __version__ in gaussian_crossings/__init__.py and version in CITATION.cff,
+# date the release in CHANGELOG.md, refresh uv.lock with `uv lock`, and run the test/doc checks.
+# Then publish a GitHub release whose tag is v<version> (for example v0.2.0).
 on:
   release:
     types: [published]

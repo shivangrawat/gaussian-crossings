@@ -67,8 +67,11 @@ estimate.fano, estimate.ci_low, estimate.ci_high       # one value per threshold
 model.fano_factor([0.5, 1.0, 1.5], T=estimate.window)  # matching prediction
 ```
 
-Counts are formed in non-overlapping windows of the sampled series `x`. A
-`CoarseSamplingWarning` is issued when the sampling is too coarse to see all crossings.
+Counts are formed in non-overlapping windows of the sampled series `x`. For nonzero-mean data,
+compare a physical threshold `u` with the model at `u - mu`, where `mu` is the process mean.
+`CoarseSamplingWarning` is a heuristic based on downsampling, applied when at least 50 crossings
+are detected at a tested threshold. No warning does not establish adequate sampling resolution;
+see the [estimation guide](https://shivangrawat.github.io/gaussian-crossings/estimation/).
 
 ## Learn more
 

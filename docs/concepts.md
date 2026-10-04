@@ -33,22 +33,23 @@ $\nu_u^2$. The package evaluates the closed form of $I^\uparrow$, written with t
 and Owen's $T$ function, and integrates it numerically. Because $I^\uparrow$ depends on $r$, $r'$,
 and $r''$ at every lag, the variance encodes the whole correlation structure.
 
-The **Fano factor** of counts in windows of length $T$ is
-$F_T = \mathrm{Var}[N(T)] / \mathbb{E}[N(T)]$. Its long-time limit is
+The **Fano factor** of upcrossing counts in windows of length $T$ is
+$F_T^\uparrow = \mathrm{Var}[N_u^\uparrow(T)] / \mathbb{E}[N_u^\uparrow(T)]$.
+Its long-time limit is
 
 $$
-F = \lim_{T\to\infty} F_T = 1 + \frac{2}{\nu_u}\int_0^\infty I^\uparrow(t)\, \mathrm{d}t ,
+F^\uparrow = \lim_{T\to\infty} F_T^\uparrow = 1 + \frac{2}{\nu_u}\int_0^\infty I^\uparrow(t)\, \mathrm{d}t ,
 $$
 
 when the integral converges.
 
-- $F < 1$: crossings are more regular than a Poisson process, as with oscillatory correlations.
-- $F > 1$: crossings cluster, as when slow relaxation produces repeated recrossings near the threshold.
-- $F = 1$ does not by itself make the crossings a Poisson process.
+- $F^\uparrow < 1$: upcrossings are more regular than a Poisson process, as with oscillatory correlations.
+- $F^\uparrow > 1$: upcrossings cluster, as when slow relaxation produces repeated recrossings near the threshold.
+- $F^\uparrow = 1$ does not by itself make the upcrossings a Poisson process.
 
 ## Finite windows versus the long-time limit
 
-$F_T$ approaches $F$ only when $T$ is long compared with the time over which crossings remain
+$F_T^\uparrow$ approaches $F^\uparrow$ only when $T$ is long compared with the time over which upcrossings remain
 correlated. For slowly decaying covariances the difference can be large. In
 [tutorial 03](tutorials/03_fano_from_data.ipynb), a process with a rational-quadratic covariance
 ($\alpha = 0.75$, $\tau = 1$) is observed at $u = 1.75$ in windows of length $T = 100$:
@@ -59,9 +60,9 @@ correlated. For slowly decaying covariances the difference can be large. In
 | Prediction for windows of length 100: `fano_factor(1.75, T=100)` | 1.23 |
 | Long-time limit: `fano_factor(1.75)` | 1.34 |
 
-The data agree with the finite-window prediction. Comparing them with the long-time limit would
-suggest a discrepancy that is not there. **When comparing with data, use the window length of the
-data.**
+Both predictions lie within the displayed 95% interval, so this estimate does not statistically
+distinguish them. The finite-window prediction is nevertheless the appropriate quantity for
+these counts. **When comparing with data, use the window length of the data.**
 
 ## Upcrossings, downcrossings, and all crossings
 
@@ -74,14 +75,17 @@ window. As a result, for all crossings (`kind="total"`)
 - in a finite window, $\mathrm{Var}[N_u(T)] = 4\,\mathrm{Var}[N^\uparrow_u(T)] - P_T$, where
   $P_T$ is the probability that $X_0$ and $X_T$ lie on opposite sides of $u$.
 
-At high thresholds crossings come from rare, isolated excursions, so the upcrossing Fano factor
-approaches one and the total-crossing Fano factor approaches two.
+For processes satisfying the finite long-time conditions below, high-threshold crossings come
+from rare, isolated excursions: the upcrossing Fano factor approaches one and the total-crossing
+Fano factor approaches two. This statement does not apply when the long-time Fano factor diverges.
 
 ## When the formulas apply
 
 The results hold for a stationary Gaussian process that is
 
 - **smooth**: sample paths are continuously differentiable, which requires a finite $q_0 = -r''(0)$.
+  Finite covariance curvature ensures mean-square differentiability; it alone does not guarantee
+  continuously differentiable sample paths.
   A process with exponential covariance (Ornstein–Uhlenbeck) is not smooth, and the package
   rejects it;
 - **regular at short lags** (Geman's condition): $\int_0^\epsilon [r''(t) - r''(0)]/t \,\mathrm{d}t < \infty$,
@@ -89,8 +93,13 @@ The results hold for a stationary Gaussian process that is
 - **nondegenerate**: $(X_0, X_t, \dot X_0, \dot X_t)$ has a nonsingular covariance for $t \neq 0$.
 
 Long-time results additionally need the correlations to decay quickly enough. It suffices that
-$r$, $r'$, and $r''$ are integrable at large lags. The rational-quadratic covariance decays as
+$r$, $r'$, and $r''$ are absolutely integrable at large lags. The rational-quadratic covariance decays as
 $|t|^{-2\alpha}$, so $\alpha > 1/2$ gives finite long-time results at every threshold. At the mean
 level $u = 0$ the leading tail term, proportional to $u^2 r(t)$, vanishes, and $\alpha > 1/4$
 suffices. The package raises an error when the tail integral diverges. Finite-window results do
 not need these conditions.
+
+These are conditions on the process, not checks that the numerical implementation can prove for
+an arbitrary callback. The default adaptive method also needs a stable right-hand covariance
+expansion through order 14; see [Numerical methods](numerics.md). For the distinction between
+mean-square and sample-path smoothness, see [GPML, Section 4.1.1](https://gaussianprocess.org/gpml/chapters/RW.pdf).

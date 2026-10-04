@@ -25,7 +25,8 @@ factor (right) ranges from regular crossings ($F<1$, purple) to clustered ones (
 pip install gaussian-crossings
 ```
 
-See [Installation](installation.md) for optional extras and a smaller CPU-only install.
+Until the first PyPI release, use the GitHub install command in [Installation](installation.md),
+which also covers optional extras and a smaller CPU-only install.
 
 ## Example
 

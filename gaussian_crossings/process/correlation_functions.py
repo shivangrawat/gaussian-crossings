@@ -33,6 +33,23 @@ def _positive(name, value, *, allow_zero=False):
         raise ValueError(f"{name} must be a finite {sign} scalar")
 
 
+def _near_equal_ou_shape(t, tau, kappa):
+    """Unit-variance OU-filter covariance without subtracting nearby exponentials."""
+    scaled = torch.abs(t) / tau
+    slow = 1 / kappa if kappa > 1 else 1.0
+    gap = abs(kappa - 1) / kappa
+    x = -gap * scaled
+    # spread = (1 - exp(-gap * scaled)) / gap. Its series also avoids
+    # cancellation in parameter gradients when the two time scales nearly agree.
+    small = torch.abs(x) < 1e-3
+    z = torch.where(small, x, 0.0)
+    series = torch.where(small, scaled, 0.0) * (
+        1 + z * (1 / 2 + z * (1 / 6 + z * (1 / 24 + z * (1 / 120 + z / 720))))
+    )
+    spread = torch.where(small, series, -torch.expm1(x) / gap)
+    return torch.exp(-slow * scaled) * (1 + slow * spread)
+
+
 def r_damped_harmonic_oscillator_noise(
     t: Union[torch.Tensor, np.ndarray, float],
     temp: float,
@@ -146,16 +163,22 @@ def r_filtered_OU(
         Autocovariance values at the specified time lag(s).
 
     Raises:
-        ValueError: If kappa equals 1 (degenerate case).
+        ValueError: If kappa equals 1, where this parametrized expression
+            has a removable singularity. The process itself remains valid:
+            its limiting covariance is sigma**2 / 2 * (1 + abs(t) / tau)
+            * exp(-abs(t) / tau), which can be supplied as a custom callback.
     """
     t = _lag_tensor(t)
     _positive("sigma", sigma, allow_zero=True)
     _positive("tau", tau, allow_zero=False)
     _positive("kappa", kappa, allow_zero=False)
-    if bool(torch.as_tensor(kappa) == 1):
+    kappa_value = torch.as_tensor(kappa, dtype=torch.float64)
+    if bool(kappa_value == 1):
         raise ValueError(
             "kappa=1 requires its limiting covariance; use an explicit smooth limit callback"
         )
+    if bool(torch.abs(kappa_value - 1) < 0.01):
+        return sigma**2 / (1 + kappa) * _near_equal_ou_shape(t, tau, kappa)
     return (sigma**2 / (1 - kappa**2)) * (
         torch.exp(-torch.abs(t) / tau) - kappa * torch.exp(-torch.abs(t) / (kappa * tau))
     )
@@ -176,22 +199,29 @@ def r_OU_noise(
         sigma: Standard deviation of the driving OU noise. The process
             variance is r(0) = sigma**2 * kappa / (1 + kappa).
         tau: Exponential decay time constant (tau_e).
-        kappa: Ratio of the filter time constant to tau (tau_f = kappa * tau).
+        kappa: Ratio of the driving-noise correlation time to tau
+            (tau_f = kappa * tau).
 
     Returns:
         Autocovariance values at the specified time lag(s).
 
     Raises:
-        ValueError: If kappa equals 1 (degenerate case).
+        ValueError: If kappa equals 1, where this parametrized expression
+            has a removable singularity. The process itself remains valid:
+            its limiting covariance is sigma**2 / 2 * (1 + abs(t) / tau)
+            * exp(-abs(t) / tau), which can be supplied as a custom callback.
     """
     t = _lag_tensor(t)
     _positive("sigma", sigma, allow_zero=True)
     _positive("tau", tau, allow_zero=False)
     _positive("kappa", kappa, allow_zero=False)
-    if bool(torch.as_tensor(kappa) == 1):
+    kappa_value = torch.as_tensor(kappa, dtype=torch.float64)
+    if bool(kappa_value == 1):
         raise ValueError(
             "kappa=1 requires its limiting covariance; use an explicit smooth limit callback"
         )
+    if bool(torch.abs(kappa_value - 1) < 0.01):
+        return sigma**2 * kappa / (1 + kappa) * _near_equal_ou_shape(t, tau, kappa)
     return (sigma**2 * kappa / (1 - kappa**2)) * (
         torch.exp(-torch.abs(t) / tau) - kappa * torch.exp(-torch.abs(t) / (kappa * tau))
     )
@@ -229,7 +259,7 @@ def r_rational_quadratic(
     squared exponential kernels with different length scales.  As alpha -> inf,
     it converges to the squared exponential kernel.  Its covariance decays as
     |t|^(-2 alpha); smaller alpha means heavier-tailed, longer-range
-    correlations.  The long-time crossing variance is finite at every
+    correlations.  The asymptotic crossing variance rate is finite at every
     threshold for alpha > 1/2.  At the mean level u = 0 the leading tail
     term, proportional to u^2 r(t), vanishes and alpha > 1/4 suffices.
 

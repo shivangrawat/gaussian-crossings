@@ -8,7 +8,7 @@ against the known model.
 |---|---|
 | [01_quickstart](01_quickstart.ipynb) | Mean, variance, and Fano factor at one threshold and across thresholds; up-, down-, and total crossings; finite windows versus the long-time limit |
 | [02_custom_covariance](02_custom_covariance.ipynb) | Writing your own covariance function, its requirements, and the errors raised by common mistakes |
-| [03_fano_from_data](03_fano_from_data.ipynb) | Estimating the Fano factor from a recording with confidence intervals, comparing it with the finite-window prediction, and detecting coarse sampling |
+| [03_fano_from_data](03_fano_from_data.ipynb) | Estimating the Fano factor from a recording with confidence intervals, comparing it with the finite-window prediction, and checking for signs of coarse sampling |
 | [04_model_discrimination](04_model_discrimination.ipynb) | Recovering a hidden damping ratio from crossing counts when every candidate has the same mean crossing rate |
 
 Install the notebook dependencies with `pip install "gaussian-crossings[notebooks]"`, or

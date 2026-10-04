@@ -148,9 +148,10 @@ def dynm_fun(f: Callable) -> Callable:
 def autocorrelation(x):
     """Mean-centered covariance at nonnegative lags, divided by n-1.
 
-    The zero-lag value is the unbiased sample variance. The denominator is
-    fixed across lags for compatibility; this is not a per-lag unbiased or
-    unit-normalized correlation estimator.
+    The zero-lag value is the usual sample variance with ``ddof=1``. It is
+    unbiased for independent samples, but generally biased for correlated
+    recordings. The denominator is fixed across lags for compatibility; this
+    is not a per-lag unbiased or unit-normalized correlation estimator.
     """
     if isinstance(x, torch.Tensor):
         x = x.detach().cpu().numpy()

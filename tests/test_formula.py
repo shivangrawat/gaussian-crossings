@@ -10,7 +10,14 @@ from scipy.integrate import quad
 from scipy.special import ndtr
 
 from gaussian_crossings import GaussianUpCrossings, GaussianUpCrossingsDimless
-from gaussian_crossings.process import r_damped_harmonic_oscillator_noise, r_OU, r_squared_exp
+from gaussian_crossings.process import (
+    r_damped_harmonic_oscillator_noise,
+    r_filtered_OU,
+    r_matern,
+    r_OU,
+    r_OU_noise,
+    r_squared_exp,
+)
 from gaussian_crossings.utils import owensT
 
 pytestmark = pytest.mark.filterwarnings(
@@ -122,6 +129,54 @@ def test_invalid_process_and_quadrature_inputs():
             model.upcrossing_variance(1.0, method="trapezoid", **options)
     with pytest.raises(ValueError):
         GaussianUpCrossingsDimless(r_squared_exp, sigma=1.0, tau=-1.0)
+
+
+@pytest.mark.parametrize(
+    "kernel,params,expected",
+    [
+        (r_damped_harmonic_oscillator_noise, dict(temp=2.3, omega0=1.7, zeta=0.5), 2.3),
+        (r_filtered_OU, dict(sigma=1.2, tau=0.7, kappa=0.3), 1.2**2 / (0.3 * 0.7**2 * 1.3)),
+        (r_OU_noise, dict(sigma=1.2, tau=0.7, kappa=0.3), 1.2**2 / (0.7**2 * 1.3)),
+        (r_matern, dict(sigma=1.2, tau=0.7, nu=1.5), 3 * 1.2**2 / 0.7**2),
+        (r_matern, dict(sigma=1.2, tau=0.7, nu=2.5), (5 / 3) * 1.2**2 / 0.7**2),
+    ],
+)
+def test_q_at_zero_uses_covariance_curvature(kernel, params, expected):
+    model = GaussianUpCrossings(kernel, **params)
+    assert model.q(0).item() == pytest.approx(expected, rel=2e-14)
+    lags = torch.tensor([[0.0, 0.2], [-0.2, 0.0]], dtype=torch.float64)
+    values = model.q(lags)
+    assert values.shape == lags.shape
+    torch.testing.assert_close(values[lags == 0], torch.full((2,), expected, dtype=torch.float64))
+    torch.testing.assert_close(values[0, 1], model.q(0.2))
+    torch.testing.assert_close(values[1, 0], values[0, 1])
+
+
+def test_q_at_zero_preserves_parameter_and_lag_gradients():
+    temp = torch.tensor(2.3, dtype=torch.float64, requires_grad=True)
+    oscillator = GaussianUpCrossings(
+        r_damped_harmonic_oscillator_noise, temp=temp, omega0=1.7, zeta=0.5
+    )
+    values = oscillator.q(torch.tensor([0.0, 0.0], dtype=torch.float64))
+    assert torch.autograd.grad(values.sum(), temp)[0].item() == pytest.approx(2.0)
+
+    # For a smooth q, even higher lag derivatives must not be cut off at the origin.
+    sigma, tau = 1.2, 0.7
+    model = GaussianUpCrossings(r_squared_exp, sigma=sigma, tau=tau)
+    lag = torch.tensor(0.0, dtype=torch.float64, requires_grad=True)
+    derivative = torch.autograd.grad(model.q(lag), lag, create_graph=True)[0]
+    second = torch.autograd.grad(derivative, lag)[0]
+    assert derivative.item() == pytest.approx(0.0, abs=1e-35)
+    assert second.item() == pytest.approx(-3 * sigma**2 / tau**4, rel=2e-14)
+
+
+def test_q_at_zero_in_dimensionless_classes_uses_internal_time():
+    from gaussian_crossings.formula import GaussianUpCrossingsDimless_minimal
+
+    for cls in (GaussianUpCrossingsDimless, GaussianUpCrossingsDimless_minimal):
+        model = cls(r_matern, sigma=1.2, tau=3.0, nu=1.5)
+        assert model.q(0).item() == pytest.approx(3 * 1.2**2, rel=2e-14)
+        torch.testing.assert_close(model.q(0), model.q0)
 
 
 @pytest.mark.parametrize("level", [0.0, 0.5, 2.0])

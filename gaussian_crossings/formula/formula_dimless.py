@@ -1,10 +1,24 @@
 """Time-normalized crossing statistics sharing the dimensional formula engine."""
 
+import inspect
 from typing import Any, Callable, Optional
 
 import torch
 
 from .formula import GaussianUpCrossings
+
+
+def _accepts_keyword(fn: Callable[..., Any], name: str) -> bool:
+    """Return True when ``fn`` accepts ``name`` as a keyword or takes ``**kwargs``."""
+    try:
+        parameters = inspect.signature(fn).parameters.values()
+    except (TypeError, ValueError):  # No introspectable signature: keep the old call.
+        return True
+    keyword_kinds = (inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY)
+    return any(
+        p.kind is inspect.Parameter.VAR_KEYWORD or (p.name == name and p.kind in keyword_kinds)
+        for p in parameters
+    )
 
 
 class GaussianUpCrossingsDimless(GaussianUpCrossings):
@@ -32,6 +46,8 @@ class GaussianUpCrossingsDimless(GaussianUpCrossings):
         value = torch.as_tensor(self.tau, dtype=torch.float64)
         if value.numel() != 1 or not bool(torch.isfinite(value) & (value > 0)):
             raise ValueError("tau must be a finite positive scalar")
+        # Kernels without a time-scale parameter (e.g. the oscillator) are evaluated as given.
+        self._unit_time_kwargs = {"tau": 1.0} if _accepts_keyword(r_func, "tau") else {}
         super().__init__(r_func, u, *args, **kwargs)
 
     @property
@@ -41,7 +57,7 @@ class GaussianUpCrossingsDimless(GaussianUpCrossings):
     def r(self, t: torch.Tensor) -> torch.Tensor:
         """Evaluate the covariance in units of the process correlation time."""
         t = torch.as_tensor(t, dtype=torch.float64)
-        return self.r_func(t, *self.args, tau=1.0, **self.kwargs)
+        return self.r_func(t, *self.args, **self._unit_time_kwargs, **self.kwargs)
 
     def crossing_variance_CLT_per_unit_time(
         self, u=None, epsilon_left=1e-4, epsilon_right=1e-5, num_points=1000, **integration_options

@@ -111,11 +111,14 @@ def sdho_parts(t, zeta):
         r = (1 + t) * math.exp(-t)
         p = -t * math.exp(-t)
     else:
-        w = math.sqrt(zeta * zeta - 1)
-        fast = zeta + w
-        slow = 1 / fast
-        r = (fast * math.exp(-slow * t) - slow * math.exp(-fast * t)) / (2 * w)
-        p = (-math.exp(-slow * t) + math.exp(-fast * t)) / (2 * w)
+        # exp(-slow t) [1 + slow (1 - exp(-2wt)) / (2w)] is the two-exponential
+        # covariance written without the 1/w cancellation that fails near zeta = 1.
+        w = math.sqrt((zeta - 1) * (zeta + 1))
+        slow = 1 / (zeta + w)
+        envelope = math.exp(-slow * t)
+        spread = -math.expm1(-2 * w * t) / (2 * w)
+        r = envelope * (1 + slow * spread)
+        p = -envelope * spread
     q = r + 2 * zeta * p
     d = 1 - r
     a = (1 - q - p * p / (2 - d)) / 2

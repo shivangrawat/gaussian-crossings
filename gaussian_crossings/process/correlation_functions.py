@@ -7,9 +7,13 @@ functions (rational quadratic, squared exponential, Matern).  These
 correlation functions serve as inputs to the exact variance and Fano factor
 formulae in the ``formula`` subpackage and are also used for simulation-based
 validation of the analytical results.
+
+Every function takes the time lag ``t`` first, followed by its named
+parameters. Unknown keyword arguments raise ``TypeError`` instead of being
+ignored, so a misspelled parameter cannot silently select a different model.
 """
 
-from typing import Any, Union
+from typing import Any, Optional, Union
 
 import numpy as np
 import torch
@@ -34,16 +38,20 @@ def r_damped_harmonic_oscillator_noise(
     temp: float,
     omega0: float,
     zeta: float,
-    **kwargs: Any,
+    *,
+    dtype: torch.dtype = torch.float64,
+    device: Optional[Union[str, torch.device]] = None,
 ) -> torch.Tensor:
     """Compute the autocorrelation function of a stochastic damped harmonic oscillator.
 
-    Computes the stationary autocorrelation function for a damped harmonic
-    oscillator driven by thermal white noise, as described in Section IV.A
-    of the paper.  The noise amplitude satisfies the fluctuation-dissipation
-    theorem.  The correlation function has three qualitatively different
-    forms depending on the damping regime: oscillatory decay (underdamped),
-    critically damped, or bi-exponential decay (overdamped).
+    Computes the stationary autocorrelation function of the position of a
+    damped harmonic oscillator driven by thermal white noise, the main example
+    of the accompanying paper.  The noise amplitude satisfies the
+    fluctuation-dissipation theorem.  The correlation function has three
+    qualitatively different forms depending on the damping regime:
+    oscillatory decay (underdamped), critically damped, or bi-exponential
+    decay (overdamped).  The overdamped branch is evaluated in a form that
+    stays accurate as ``zeta`` approaches one from above.
 
     Args:
         t: Time lag(s) at which to evaluate the correlation function.
@@ -51,9 +59,8 @@ def r_damped_harmonic_oscillator_noise(
         omega0: Natural angular frequency of the oscillator.
         zeta: Damping ratio (zeta < 1: underdamped, zeta = 1: critically
             damped, zeta > 1: overdamped).
-        **kwargs: Optional keyword arguments:
-            - dtype: Torch dtype for computation (default: torch.float64).
-            - device: Torch device for computation (default: None).
+        dtype: Torch dtype used for non-tensor inputs (default: float64).
+        device: Torch device used for non-tensor inputs (default: None).
 
     Returns:
         Autocorrelation values r(t) at the specified time lag(s).
@@ -65,8 +72,6 @@ def r_damped_harmonic_oscillator_noise(
     _positive("omega0", omega0, allow_zero=False)
     _positive("zeta", zeta, allow_zero=False)
     _positive("temp", temp, allow_zero=True)
-    dtype = kwargs.get("dtype", torch.float64)
-    device = kwargs.get("device", None)
 
     def to_tensor(x: Any) -> torch.Tensor:
         return x if isinstance(x, torch.Tensor) else torch.tensor(x, dtype=dtype, device=device)
@@ -78,7 +83,6 @@ def r_damped_harmonic_oscillator_noise(
 
     t_abs = torch.abs(t)
     prefactor = temp * zeta / omega0**2
-    decay = torch.exp(-zeta * omega0 * t_abs)
 
     discriminant = zeta**2 - 1.0
 
@@ -98,19 +102,31 @@ def r_damped_harmonic_oscillator_noise(
         oscillatory_part = t_abs * omega0 + 1.0
         result = prefactor * decay * oscillatory_part
 
-    # Over-damped case (zeta > 1)
+    # Over-damped case (zeta > 1).
     else:
-        sqrt_disc = torch.sqrt(discriminant)
-        term1 = (1 / sqrt_disc + 1 / zeta) * torch.exp(-omega0 * (zeta - sqrt_disc) * t_abs)
-        term2 = (1 / zeta - 1 / sqrt_disc) * torch.exp(-omega0 * (zeta + sqrt_disc) * t_abs)
-        exp_part = 0.5 * (term1 + term2)
-        result = prefactor * exp_part
+        w = torch.sqrt((zeta - 1.0) * (zeta + 1.0))
+        if w < 0.1:
+            # Near critical damping the two-exponential form cancels. With
+            # slow = zeta - w and s = omega0 |t|, use the equivalent expression
+            # r = (temp/omega0^2) exp(-slow s) [1 + slow (1 - exp(-2 w s)) / (2 w)].
+            slow = 1.0 / (zeta + w)
+            scaled = omega0 * t_abs
+            envelope = torch.exp(-slow * scaled)
+            spread = -torch.expm1(-2.0 * w * scaled) / (2.0 * w)
+            result = (temp / omega0**2) * envelope * (1.0 + slow * spread)
+        else:
+            # Historical arithmetic, kept so archived compatibility values reproduce exactly.
+            sqrt_disc = torch.sqrt(discriminant)
+            term1 = (1 / sqrt_disc + 1 / zeta) * torch.exp(-omega0 * (zeta - sqrt_disc) * t_abs)
+            term2 = (1 / zeta - 1 / sqrt_disc) * torch.exp(-omega0 * (zeta + sqrt_disc) * t_abs)
+            exp_part = 0.5 * (term1 + term2)
+            result = prefactor * exp_part
 
     return result
 
 
 def r_filtered_OU(
-    t: Union[torch.Tensor, np.ndarray, float], sigma: float, tau: float, kappa: float, **kwargs: Any
+    t: Union[torch.Tensor, np.ndarray, float], sigma: float, tau: float, kappa: float
 ) -> torch.Tensor:
     """Compute the autocovariance function of a filtered Ornstein-Uhlenbeck process.
 
@@ -121,10 +137,10 @@ def r_filtered_OU(
 
     Args:
         t: Time lag(s) at which to evaluate the autocovariance.
-        sigma: Noise amplitude parameter. The process standard deviation follows from r(0).
+        sigma: Amplitude of the input OU process. The filtered process has
+            variance r(0) = sigma**2 / (1 + kappa).
         tau: Exponential decay time constant (tau_e).
         kappa: Ratio of filter time constant to tau (tau_f = kappa * tau).
-        **kwargs: Additional keyword arguments (unused, for API consistency).
 
     Returns:
         Autocovariance values at the specified time lag(s).
@@ -146,24 +162,27 @@ def r_filtered_OU(
 
 
 def r_OU_noise(
-    t: Union[torch.Tensor, np.ndarray, float], sigma: float, tau: float, kappa: float, **kwargs: Any
+    t: Union[torch.Tensor, np.ndarray, float], sigma: float, tau: float, kappa: float
 ) -> torch.Tensor:
     """Compute the autocovariance function of a mean-reverting process driven by OU noise.
 
-    This represents the correlation function of the process y(t) from
-    Section IV.B of the paper, where a mean-reverting process is driven
-    by Ornstein-Uhlenbeck noise.  The resulting bi-exponential correlation
-    structure supports both sub- and super-Poissonian crossing statistics.
+    The process y(t) relaxes toward zero with time constant tau and is driven
+    by Ornstein-Uhlenbeck noise with correlation time kappa * tau, as in the
+    accompanying paper.  The resulting bi-exponential correlation structure
+    supports both sub- and super-Poissonian crossing statistics.
 
     Args:
         t: Time lag(s) at which to evaluate the autocovariance.
-        sigma: Noise amplitude parameter. The process standard deviation follows from r(0).
+        sigma: Standard deviation of the driving OU noise. The process
+            variance is r(0) = sigma**2 * kappa / (1 + kappa).
         tau: Exponential decay time constant (tau_e).
         kappa: Ratio of the filter time constant to tau (tau_f = kappa * tau).
-        **kwargs: Additional keyword arguments (unused, for API consistency).
 
     Returns:
         Autocovariance values at the specified time lag(s).
+
+    Raises:
+        ValueError: If kappa equals 1 (degenerate case).
     """
     t = _lag_tensor(t)
     _positive("sigma", sigma, allow_zero=True)
@@ -178,19 +197,19 @@ def r_OU_noise(
     )
 
 
-def r_OU(
-    t: Union[torch.Tensor, np.ndarray, float], sigma: float, tau: float, **kwargs: Any
-) -> torch.Tensor:
+def r_OU(t: Union[torch.Tensor, np.ndarray, float], sigma: float, tau: float) -> torch.Tensor:
     """Compute the autocovariance function of an Ornstein-Uhlenbeck process.
 
     The OU process has an exponentially decaying autocorrelation function:
         r(t) = sigma^2 * exp(-|t| / tau)
 
+    Its sample paths are not differentiable, so the crossing formulae do not
+    apply to it directly; it is provided for simulation and as a building block.
+
     Args:
         t: Time lag(s) at which to evaluate the autocovariance.
-        sigma: Noise amplitude parameter. The process standard deviation follows from r(0).
+        sigma: Standard deviation of the process (r(0) = sigma**2).
         tau: Exponential decay time constant (correlation time).
-        **kwargs: Additional keyword arguments (unused, for API consistency).
 
     Returns:
         Autocovariance values at the specified time lag(s).
@@ -202,25 +221,22 @@ def r_OU(
 
 
 def r_rational_quadratic(
-    t: Union[torch.Tensor, np.ndarray, float], sigma: float, tau: float, alpha: float, **kwargs: Any
+    t: Union[torch.Tensor, np.ndarray, float], sigma: float, tau: float, alpha: float
 ) -> torch.Tensor:
     """Compute the rational quadratic autocorrelation function.
 
     The rational quadratic kernel can be seen as an infinite mixture of
     squared exponential kernels with different length scales.  As alpha -> inf,
-    it converges to the squared exponential kernel.  This kernel is analyzed
-    in Section IV.C of the paper, where the shape parameter alpha is shown
-    to control crossing statistics together with the threshold. All five
-    curves in the revised Figure 6 have a maximum above one, including
-    the squared-exponential limit.
+    it converges to the squared exponential kernel.  Its covariance decays as
+    |t|^(-2 alpha), so the long-time crossing variance is finite only for
+    alpha > 1/2; smaller alpha means heavier-tailed, longer-range correlations.
 
     Args:
         t: Time lag(s) at which to evaluate the autocorrelation.
-        sigma: Noise amplitude parameter. The process standard deviation follows from r(0).
+        sigma: Standard deviation of the process (r(0) = sigma**2).
         tau: Length-scale parameter.
         alpha: Shape parameter controlling the mixture of scales.
             Larger alpha means the kernel is closer to squared exponential.
-        **kwargs: Additional keyword arguments (unused, for API consistency).
 
     Returns:
         Autocorrelation values at the specified time lag(s).
@@ -233,7 +249,7 @@ def r_rational_quadratic(
 
 
 def r_squared_exp(
-    t: Union[torch.Tensor, np.ndarray, float], sigma: float, tau: float, **kwargs: Any
+    t: Union[torch.Tensor, np.ndarray, float], sigma: float, tau: float
 ) -> torch.Tensor:
     """Compute the squared exponential (Gaussian/RBF) autocovariance function.
 
@@ -243,9 +259,8 @@ def r_squared_exp(
 
     Args:
         t: Time lag(s) at which to evaluate the autocovariance.
-        sigma: Noise amplitude parameter. The process standard deviation follows from r(0).
+        sigma: Standard deviation of the process (r(0) = sigma**2).
         tau: Length-scale parameter (characteristic time scale).
-        **kwargs: Additional keyword arguments (unused, for API consistency).
 
     Returns:
         Autocovariance values at the specified time lag(s).
@@ -257,7 +272,7 @@ def r_squared_exp(
 
 
 def r_matern(
-    t: Union[torch.Tensor, np.ndarray, float], sigma: float, tau: float, nu: float, **kwargs: Any
+    t: Union[torch.Tensor, np.ndarray, float], sigma: float, tau: float, nu: float
 ) -> torch.Tensor:
     """Compute the Matérn autocorrelation function.
 
@@ -270,18 +285,18 @@ def r_matern(
 
     Args:
         t: Time lag(s) at which to evaluate the autocorrelation.
-        sigma: Noise amplitude parameter. The process standard deviation follows from r(0).
+        sigma: Standard deviation of the process (r(0) = sigma**2).
         tau: Length-scale parameter.
         nu: Smoothness parameter (nu > 0). Controls differentiability
             of sample paths.
-        **kwargs: Additional keyword arguments (unused, for API consistency).
 
     Returns:
         Autocorrelation values at the specified time lag(s).
 
     Note:
         Uses scipy.special.kv (modified Bessel function of the second kind)
-        for computation.
+        for general nu. Automatic differentiation, which the crossing formulae
+        need, is supported only for nu = 0.5, 1.5, and 2.5.
     """
     t = _lag_tensor(t)
     _positive("sigma", sigma, allow_zero=True)

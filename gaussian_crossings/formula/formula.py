@@ -24,6 +24,14 @@ class NumericalIntegrationWarning(RuntimeWarning):
     """The compatibility quadrature omitted nonfinite small-lag samples."""
 
 
+_TORCH_CALLBACK_MESSAGE = (
+    "The covariance callback returned {kind}. It must be written with PyTorch "
+    "operations (for example torch.exp rather than np.exp) and return a torch.Tensor, "
+    "because r'(t) and r''(t) are obtained by automatic differentiation. The kernels "
+    "in gaussian_crossings.process follow this convention."
+)
+
+
 class GaussianUpCrossings:
     """Compute exact level crossing statistics for stationary Gaussian processes.
 
@@ -90,9 +98,18 @@ class GaussianUpCrossings:
 
         # Evaluate r, its first derivative (p), and the second derivative (q) at t = 0.
         self.r0 = self.r(torch.tensor(0.0, dtype=torch.float64))
+        if not isinstance(self.r0, torch.Tensor):
+            raise TypeError(_TORCH_CALLBACK_MESSAGE.format(kind=type(self.r0).__name__))
         self.p0 = torch.tensor(0.0, dtype=torch.float64)
         # Use a positive lag because abs(t) has an artificial autograd cusp at zero.
-        self.q0 = self.q(torch.tensor(1e-40, dtype=torch.float64))
+        try:
+            self.q0 = self.q(torch.tensor(1e-40, dtype=torch.float64))
+        except (RuntimeError, TypeError) as exc:
+            if "numpy" not in str(exc).lower() and "grad" not in str(exc).lower():
+                raise
+            raise TypeError(
+                _TORCH_CALLBACK_MESSAGE.format(kind="a non-differentiable value")
+            ) from exc
         for name, value in (("r(0)", self.r0), ("-r''(0)", self.q0)):
             if value.numel() != 1 or not bool(torch.isfinite(value) & (value > 0)):
                 raise ValueError(
@@ -1037,8 +1054,8 @@ class GaussianUpCrossings:
 
         When the threshold equals the process mean (u=0), the general
         formula simplifies: Owen's T function reduces to an arctangent,
-        recovering the classical result of Steinberg (1955) and
-        Leadbetter (1966).
+        recovering the classical results of Steinberg et al. (1955) and
+        Leadbetter and Cryer (1965).
 
         Args:
             t: Time lag(s) at which to evaluate the integrand.

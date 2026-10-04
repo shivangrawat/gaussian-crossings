@@ -9,7 +9,7 @@ import numpy as np
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-SPEC = importlib.util.spec_from_file_location("pre_figures", ROOT / "examples/pre_figures.py")
+SPEC = importlib.util.spec_from_file_location("pre_figures", ROOT / "paper/pre_figures.py")
 PRE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(PRE)
 REF = json.loads((Path(__file__).parent / "fixtures/paper_reference.json").read_text())
@@ -48,10 +48,10 @@ def test_finite_window_figure3_theory():
 
 def test_all_retained_notebooks_are_figure_sources():
     expected = {value for value in PRE.NOTEBOOKS.values() if value is not None}
-    expected.add("examples/PRE_regenerated_figures.ipynb")
+    expected.add("paper/PRE_regenerated_figures.ipynb")
     actual = {
         str(path.relative_to(ROOT))
-        for path in (ROOT / "examples").rglob("*.ipynb")
+        for path in (ROOT / "paper").rglob("*.ipynb")
         if ".ipynb_checkpoints" not in path.parts
     }
     assert actual == expected
@@ -73,7 +73,7 @@ def test_figure3_exact_transition_and_bootstrap_validation():
 def test_cached_archive_verification_rejects_changed_source(tmp_path):
     import shutil
 
-    source = ROOT / "examples/pre_figures.py"
+    source = ROOT / "paper/pre_figures.py"
     shutil.copyfile(source, tmp_path / "run_source.py")
     (tmp_path / "run.json").write_text(json.dumps({"source_sha256": PRE.digest(source)}))
     PRE.verify_archive(tmp_path)

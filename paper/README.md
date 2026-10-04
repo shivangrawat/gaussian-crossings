@@ -13,6 +13,10 @@ It is separate from the package and its user [tutorials](../examples/README.md).
 | `reproduction/` | Checksum-verified archive of the numerical inputs for Figures 2–6 |
 | `fig1_illustration.ipynb`, `*/` notebooks | Original figure notebooks, kept as provenance records |
 
+Three of the original figure notebooks use the deprecated `GaussianUpCrossingsDimless` class
+and show a `DeprecationWarning` when re-run; this is expected. `PRE_regenerated_figures.ipynb`
+uses the current interface.
+
 The exact code used for the revised manuscript is tagged
 [`pre-revision-2026-09-27`](https://github.com/shivangrawat/gaussian-crossings/tree/pre-revision-2026-09-27).
 Step-by-step instructions are in the

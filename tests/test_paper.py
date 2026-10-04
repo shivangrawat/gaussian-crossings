@@ -58,6 +58,7 @@ def test_all_retained_notebooks_are_figure_sources():
 
 
 @pytest.mark.reproduction
+@pytest.mark.filterwarnings("ignore:GaussianUpCrossingsDimless.*is deprecated:DeprecationWarning")
 def test_full_local_archive_validation():
     if not (ROOT / "data/pre_figure3_10000/summary.json").exists():
         pytest.skip("Requires the untracked 50,000-trial Figure 3 archive")

@@ -13,4 +13,4 @@ against the known model.
 
 Install the notebook dependencies with `pip install "gaussian-crossings[notebooks]"`, or
 `uv sync --extra notebooks` from a clone. The notebooks that reproduce the figures of the paper
-are in [`paper/`](../paper/README.md).
+are in [`paper/`](https://github.com/shivangrawat/gaussian-crossings/tree/main/paper).

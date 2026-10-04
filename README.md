@@ -1,258 +1,105 @@
 # Gaussian Crossings
 
-**From a Gaussian process's covariance to the variability of its level crossings.**
+**Exact variance and Fano factor of level crossings for smooth stationary Gaussian processes.**
 
-[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB)](pyproject.toml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Tests](https://github.com/shivangrawat/gaussian-crossings/actions/workflows/tests.yml/badge.svg)](https://github.com/shivangrawat/gaussian-crossings/actions/workflows/tests.yml)
+[![Documentation](https://img.shields.io/badge/docs-online-blue)](https://shivangrawat.github.io/gaussian-crossings/)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB)](https://github.com/shivangrawat/gaussian-crossings/blob/main/pyproject.toml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](https://github.com/shivangrawat/gaussian-crossings/blob/main/LICENSE)
 [![arXiv](https://img.shields.io/badge/arXiv-2605.25278-b31b1b)](https://arxiv.org/abs/2605.25278)
 
-Code accompanying **[Exact Variance and Fano Factor for Arbitrary Level Crossings in Stationary Gaussian Processes](https://arxiv.org/abs/2605.25278)**, by Shivang Rawat, Flaviano Morone, David J. Heeger, and Stefano Martiniani.
+Given the autocovariance $r(t)$ of a stationary Gaussian process and a threshold $u$, this package
+computes the mean, the exact variance, and the Fano factor of the number of upcrossings,
+downcrossings, or all crossings of $u$, for finite observation windows and in the long-time limit.
+It also estimates the Fano factor from sampled data, with confidence intervals, so predictions
+can be compared directly with measurements.
 
-![Mean crossing rate, variance rate, and Fano factor of a damped harmonic oscillator as threshold and damping vary.](docs/assets/sdho_phase.png)
+![Mean crossing rate, variance rate, and Fano factor of a damped harmonic oscillator as the threshold and damping vary.](https://raw.githubusercontent.com/shivangrawat/gaussian-crossings/main/docs/assets/sdho_phase.png)
 
-*Figure 2: the mean rate is independent of damping, while the variance and Fano factor reveal changes in temporal organization. White in the Fano panel marks one.*
-
-[Quick start](#quick-start) · [The mathematics](#the-mathematics) · [Reproduce the paper](#reproduce-the-paper) · [API and numerical notes](docs/api.md) · [Tests](#development-and-tests)
-
-## What the package does
-
-Given an autocovariance $r(t)$ and a threshold $u$, compute the mean, finite-window variance, and long-time Fano factor of **upcrossings, downcrossings, or all crossings** of a smooth stationary Gaussian process. The package also supplies covariance functions, Gaussian-path samplers, crossing counters, and differentiable special functions.
-
-A crossing rate describes **how often** events occur. The variance describes **how variable the event count is** across observation windows. Two processes can have the same rate and very different count variability because their correlations differ away from zero lag.
-
-| Quantity | Meaning | Main methods |
-|---|---|---|
-| Mean count | Expected events in a window of length $T$ | `upcrossing_mean(T)`, `crossing_mean(T)` |
-| Finite-window variance | Count variability at the specified $T$ | `upcrossing_variance(T)`, `crossing_variance(T)` |
-| Finite-window Fano ratio | Variance divided by mean at that $T$ | `upcrossing_fano_factor(T)` |
-| Long-time Fano factor | Limiting variance-to-mean ratio | `upcrossing_fano_factor_CLT()` |
-
-Replace `upcrossing` with `downcrossing` for the corresponding downward-crossing methods. Upward and downward statistics agree for the stationary Gaussian processes considered here. Total-crossing variance is **not** obtained by simply doubling upcrossing variance.
+*The mean crossing rate (left) depends only on $r(0)$ and $r''(0)$ and is the same for every
+damping ratio. The Fano factor (right) depends on the whole covariance and separates regular
+crossings ($F<1$, purple) from clustered ones ($F>1$, green).*
 
 ## Installation
 
-Requires Python 3.10 or newer. From a clone:
+```bash
+pip install gaussian-crossings
+```
+
+Until the first release is on PyPI, install from GitHub with
+`pip install "git+https://github.com/shivangrawat/gaussian-crossings"`. Python 3.10 or newer is
+required. See the [installation guide](https://shivangrawat.github.io/gaussian-crossings/installation/)
+for optional extras and a smaller CPU-only install.
+
+## Example
+
+```python
+from gaussian_crossings import GaussianCrossings
+from gaussian_crossings.process import r_damped_harmonic_oscillator_noise
+
+model = GaussianCrossings(r_damped_harmonic_oscillator_noise, temp=1.0, omega0=1.0, zeta=0.5)
+
+model.mean_rate(u=0.5)              # 0.1405 upcrossings per unit time
+model.fano_factor(u=0.5)            # 0.4071, long-time Fano factor (regular crossings)
+model.fano_factor(u=0.5, T=120.0)   # 0.4145, Fano factor of counts in windows of length 120
+model.fano_factor(u=0.5, kind="total")
+```
+
+Thresholds can be arrays, and `kind` is `"up"`, `"down"`, or `"total"`. You can also
+[use your own covariance function](https://shivangrawat.github.io/gaussian-crossings/covariances/).
+
+## Finite windows versus the long-time limit
+
+When comparing with data, use the Fano factor for the **window length of the data**,
+`fano_factor(u, T=window)`, rather than the long-time limit. The two can differ noticeably when
+windows span only a few correlation times. For a process with a rational-quadratic covariance
+($\alpha = 0.75$, $\tau = 1$) observed at $u = 1.75$ in windows of length 100, artificial data give
+1.25 (95% interval 1.14–1.37), the finite-window prediction is 1.23, and the long-time limit is
+1.34 ([tutorial 03](https://github.com/shivangrawat/gaussian-crossings/blob/main/examples/03_fano_from_data.ipynb)).
+
+## Estimating from data
+
+```python
+from gaussian_crossings import empirical_fano
+
+estimate = empirical_fano(x, u=[0.5, 1.0, 1.5], window=50.0, dt=0.01, seed=0)
+estimate.fano, estimate.ci_low, estimate.ci_high       # one value per threshold
+model.fano_factor([0.5, 1.0, 1.5], T=estimate.window)  # matching prediction
+```
+
+Counts are formed in non-overlapping windows of the sampled series `x`. A
+`CoarseSamplingWarning` is issued when the sampling is too coarse to see all crossings.
+
+## Learn more
+
+- [Documentation](https://shivangrawat.github.io/gaussian-crossings/): concepts, covariance
+  functions, numerical methods, and the API reference.
+- [Tutorials](https://github.com/shivangrawat/gaussian-crossings/blob/main/examples/README.md): quick start, custom covariances, estimating from data, and
+  telling models apart, all with artificial data.
+- [Paper reproduction](https://github.com/shivangrawat/gaussian-crossings/blob/main/paper/README.md): scripts and archived data for the figures of the paper.
+- [Changelog](https://github.com/shivangrawat/gaussian-crossings/blob/main/CHANGELOG.md).
+
+## Citation
+
+If you use this package, please cite
+
+> S. Rawat, F. Morone, D. J. Heeger, and S. Martiniani, *Exact Variance and Fano Factor for
+> Arbitrary Level Crossings in Stationary Gaussian Processes*,
+> [arXiv:2605.25278](https://arxiv.org/abs/2605.25278) (2026).
+
+BibTeX and software citation metadata are in the
+[documentation](https://shivangrawat.github.io/gaussian-crossings/citation/) and
+[`CITATION.cff`](https://github.com/shivangrawat/gaussian-crossings/blob/main/CITATION.cff).
+
+## Development
 
 ```bash
 git clone https://github.com/shivangrawat/gaussian-crossings.git
 cd gaussian-crossings
-uv sync --all-extras --locked
-```
-
-Or use pip in a virtual environment:
-
-```bash
-python -m pip install -e '.[dev,notebooks,reproduce]'
-```
-
-Core dependencies are NumPy, SciPy, PyTorch, and Matplotlib. Notebook and development tools are optional extras. The figure runner uses `mpmath` for high-precision checks; rendering the paper's typography also requires a LaTeX installation. The optional manuscript-comparison command additionally needs `latexmk`.
-
-## Quick start
-
-### Crossing statistics
-
-```python
-from gaussian_crossings import GaussianUpCrossings
-from gaussian_crossings.process import r_damped_harmonic_oscillator_noise
-
-model = GaussianUpCrossings(
-    r_damped_harmonic_oscillator_noise,
-    u=0.5,
-    temp=1.0,
-    omega0=1.0,
-    zeta=0.5,
-)
-
-T = 120.0
-mean = model.upcrossing_mean(T)
-variance = model.upcrossing_variance(T)
-fano_T = model.upcrossing_fano_factor(T)
-fano_infinity = model.upcrossing_fano_factor_CLT()
-
-print(f"Mean: {mean.item():.6f}")
-print(f"Variance: {variance.item():.6f}")
-print(f"Finite-window ratio: {fano_T.item():.6f}")
-print(f"Long-time Fano factor: {fano_infinity.item():.6f}")
-```
-
-Variance and Fano methods default to adaptive integration with stable small-lag expressions and convergence checks. The figure runner uses this same package implementation. Absolute and relative tolerances apply to the Fano ratio; inspect `model.last_integration_info` for estimated errors and cutoff refinement. The adaptive path uses SciPy on CPU and does not supply parameter gradients.
-
-```python
-fano = model.upcrossing_fano_factor_CLT(epsabs=2e-10, epsrel=2e-10)
-print(model.last_integration_info)
-
-# Preserve the previous grid calculation (including its endpoint conventions).
-fano_grid = model.upcrossing_fano_factor_CLT(method="trapezoid", num_points=10000)
-```
-
-Use `method="trapezoid"` when differentiating numerical integrals with PyTorch. Supplied paper covariances have dedicated stable expressions; custom callbacks use a checked local Taylor expansion. See [API and numerical notes](docs/api.md) for assumptions and limitations.
-
-### Simulate and count events
-
-```python
-import torch
-from gaussian_crossings.process import r_squared_exp
-from gaussian_crossings.utils import (
-    simulate_gaussian_process_fft,
-    count_upcrossings,
-    upcrossing_times,
-)
-
-torch.manual_seed(27)
-t, x = simulate_gaussian_process_fft(
-    r_squared_exp, T=100.0, dt=0.01, sigma=1.0, tau=1.0,
-)
-print("Upcrossings:", count_upcrossings(x, threshold=0.5))
-event_times = upcrossing_times(x, t, threshold=0.5)
-```
-
-Sampling can miss crossings between time points. Refine `dt` before comparing sampled counts with continuous-time predictions. The FFT sampler checks its circulant covariance embedding; it raises an error if the embedding is not positive semidefinite. Cholesky sampling is available for smaller problems.
-
-## The mathematics
-
-For a zero-mean stationary Gaussian process with variance $r(0)$ and derivative variance $-r''(0)$, the Kac-Rice mean upcrossing rate is
-
-$$
-\nu_u = \frac{1}{2\pi}\sqrt{\frac{-r''(0)}{r(0)}}
-\exp\!\left(-\frac{u^2}{2r(0)}\right),
-\qquad \mathbb{E}[N_u^\uparrow(T)] = T\nu_u.
-$$
-
-Only the covariance's value and curvature at zero enter the mean. The paper reduces the **variance** to a single time integral whose integrand depends on the full covariance and its first two derivatives:
-
-$$
-\operatorname{Var}[N_u^\uparrow(T)]
-= T\nu_u + 2\int_0^T (T-t)\,I_u^\uparrow(t)\,dt.
-$$
-
-Here $I_u^\uparrow(t)$ is the joint crossing intensity minus $\nu_u^2$. Its closed-form expression uses the error function and Owen's $T$ function. When the excess pair intensity is integrable,
-
-$$
-F_u^\uparrow = 1 + \frac{2}{\nu_u}\int_0^\infty I_u^\uparrow(t)\,dt.
-$$
-
-- **$F<1$:** underdispersion relative to Poisson counts.
-- **$F>1$:** overdispersion relative to Poisson counts.
-- **$F=1$:** equality of variance and mean; this alone does not establish a Poisson process.
-
-Upward and downward crossings alternate. When the upcrossing variance grows at most linearly with time, the total-crossing long-time Fano factor satisfies $F=2F^\uparrow$. Thus the high-level Poisson limit for **upcrossings** gives a total-crossing limit of two.
-
-The theory assumes a nondegenerate stationary Gaussian process with sufficiently smooth sample paths and covariance. The long-time limit needs additional integrability conditions. Ordinary, unfiltered OU paths are not smooth enough for these crossing formulas, although their covariance remains useful for simulation.
-
-### What the examples reveal
-
-**Damped harmonic oscillator.** The mean rate is independent of damping at fixed temperature and natural frequency. Low-threshold underdamped crossings can be underdispersed, while higher thresholds can produce $F>1$ even in the underdamped regime. Both damping and threshold matter.
-
-**Mean reversion driven by OU noise.** Purely relaxational correlations also produce nonmonotonic Fano factors. The revised Figure 5 shows a sub-to-super-Poissonian transition; it does not resolve a return below one over its plotted range.
-
-**Rational-quadratic covariance.** All five curves in Figure 6, including the squared-exponential limit, have a maximum above one. The overshoot becomes small as the kernel approaches the squared-exponential limit. The high-threshold approach to one is subject to the paper's dependence assumptions.
-
-## Reproduce the paper
-
-Start with [`examples/PRE_regenerated_figures.ipynb`](examples/PRE_regenerated_figures.ipynb), or run the commands below. It uses [`examples/pre_figures.py`](examples/pre_figures.py) for the numerical figures (Figures 2–6), and also exports alternative illustrations for Figure 1 and Supplemental Figure S1. The submitted revision retains the original illustrations.
-
-The runner uses stable conditional covariances, adaptive quadrature, explicit tail checks, and independent positive Gaussian integrals. It preserves the signed error-function argument. The numerical figures call the public package default, including all finite-window Figure 3 curves. Independent calculations remain as validation references.
-
-### Published revision data
-
-The tagged release [`pre-revision-2026-09-27`](https://github.com/shivangrawat/gaussian-crossings/tree/pre-revision-2026-09-27) contains a
-[checksum-verified archive](reproduction/README.md) of the arrays and crossing counts used in Figures 2–6. To reproduce those figures without rerunning the simulation:
-
-```bash
-uv run python examples/restore_pre_archive.py
-uv run python examples/pre_figures.py plot \
-  --output data/pre_figures_20260927 --figures figures/publication --historical
-```
-
-For a new calculation instead, follow the steps below.
-
-### 1. Generate the Figure 3 simulation archive
-
-To create a new ensemble, use a fresh output directory. The following commands use `data/pre_figure3_10000`; do not run them over a restored manuscript archive. Generate 10,000 trials at each damping ratio, then analyze them:
-
-```bash
-uv run python examples/damped_harmonic_oscillator/pre_figure3.py validate
-uv run python examples/damped_harmonic_oscillator/pre_figure3.py simulate \
-  --output data/pre_figure3_10000 --trials 10000 --dt 0.00125 \
-  --seed 20260927 --workers 3
-uv run python examples/damped_harmonic_oscillator/pre_figure3.py analyze \
-  --output data/pre_figure3_10000 --bootstrap 10000
-```
-
-This is the full simulation, not a smoke test. It uses stationary initial conditions, exact Gaussian transitions, nested sampling grids, and whole-trial bootstrap resampling. The 95% intervals are pointwise. Numerical convergence checks do not require every individual interval to contain the theoretical value.
-
-If you already have the manuscript's validated archive, preserve it. The source that generated an existing ensemble is recorded in `run.json`; use its archived `run_source.py` for reanalysis when the current source hash differs. The current plotting command can render its existing summary. See [the reproduction guide](docs/reproducibility.md) for the distinction between the archived manuscript ensemble and a new run.
-
-### 2. Calculate and export all figures
-
-Choose a fresh output directory:
-
-```bash
-uv run python examples/pre_figures.py all \
-  --output data/pre_figures_new --figures figures/publication
-```
-
-To re-export an existing numerical archive from this package version:
-
-```bash
-uv run python examples/pre_figures.py plot \
-  --output data/pre_figures_adaptive --figures figures/publication
-```
-
-Both commands stay within this repository. Existing calculation archives are protected against overwriting. Figures are PDFs; LaTeX caches and auxiliary files go under `build/` directories.
-
-| Paper figure | Subject | Retained source notebook |
-|---|---|---|
-| 1 | Crossing events on example paths | [`fig1_illustration`](examples/fig1_illustration.ipynb) |
-| 2 | SDHO mean, variance, and Fano landscape | [`sdho_zeta`](examples/damped_harmonic_oscillator/sdho_zeta.ipynb) |
-| 3 | Finite-window theory and simulation | [`theory_simulation_upcrossings`](examples/damped_harmonic_oscillator/theory_simulation_upcrossings.ipynb) |
-| 4a-c | Frequency and threshold scan | [`fano_scan_omega0`](examples/damped_harmonic_oscillator/fano_scan_omega0.ipynb) |
-| 4d-f | Temperature and threshold scan | [`fano_scan_temp`](examples/damped_harmonic_oscillator/fano_scan_temp.ipynb) |
-| 5 | OU-driven mean reversion | [`OU_noise`](examples/OU_noise/OU_noise.ipynb) |
-| 6 | Rational-quadratic and squared-exponential limits | [`rational_quadratic`](examples/rational_quadratic/rational_quadratic.ipynb) |
-| S1 | Integration-region geometry | Reconstructed by `pre_figures.py` |
-
-These seven source notebooks retain the exploratory figure calculations and parameter choices. The PRE runner is the reproduction path for the revised paper, including Figure 3's updated simulation and error bars. Unrelated exploratory and estimation notebooks have been removed.
-
-## Repository guide
-
-```text
-gaussian_crossings/
-  formula/         Shared analytical engine and compatibility interfaces
-  process/         Covariance functions and stochastic dynamical systems
-  utils/           Simulators, crossing detection, differentiable Owen's T
-examples/          Figure notebooks and the validated PRE runners
-tests/             Regression, analytical, simulation, and paper-reference tests
-docs/              API notes, numerical caveats, and reproduction details
-data/              Generated numerical archives (not versioned)
-figures/           Generated exports (not versioned)
-```
-
-## Development and tests
-
-```bash
-uv sync --all-extras --locked
+uv sync --all-extras
 uv run pytest
 uv run ruff check gaussian_crossings tests
-uv run ruff format --check gaussian_crossings tests
+uv run mkdocs serve        # documentation preview
 ```
 
-Tests cover 60 numerical compatibility cases with `method="trapezoid"`, adaptive paper benchmarks, short windows, convergence failures, custom covariances, independent conditional-Gaussian integrals, sign symmetry, dimensional scaling, analytical gradients, covariance identities, sampling statistics, crossing endpoint rules, and the paper's numerical benchmarks. The full local-archive check runs when the Figure 3 archive is present; otherwise it is reported as skipped. All other tests work from a fresh clone.
-
-Existing class names and import paths remain supported. Importing the package leaves PyTorch's global default dtype unchanged; formula evaluation uses explicit double precision. The older `GaussianUpCrossingsDimless_minimal` class retains its historical quadrature for compatibility and is not the recommended interface for new work. See [API and numerical notes](docs/api.md).
-
-## Citation and license
-
-```bibtex
-@misc{rawat2026exact,
-  title={Exact Variance and Fano Factor for Arbitrary Level Crossings in Stationary Gaussian Processes},
-  author={Rawat, Shivang and Morone, Flaviano and Heeger, David J. and Martiniani, Stefano},
-  year={2026},
-  eprint={2605.25278},
-  archivePrefix={arXiv},
-  primaryClass={math.PR},
-  doi={10.48550/arXiv.2605.25278}
-}
-```
-
-Machine-readable citation metadata is in [`CITATION.cff`](CITATION.cff). Code is released under the [MIT license](LICENSE).
+Released under the [MIT license](https://github.com/shivangrawat/gaussian-crossings/blob/main/LICENSE).

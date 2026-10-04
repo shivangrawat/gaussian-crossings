@@ -1,0 +1,87 @@
+site_name: Gaussian Crossings
+site_description: Exact mean, variance, and Fano factor of level crossings in stationary Gaussian processes
+site_url: https://shivangrawat.github.io/gaussian-crossings/
+repo_url: https://github.com/shivangrawat/gaussian-crossings
+repo_name: shivangrawat/gaussian-crossings
+edit_uri: edit/main/docs/
+copyright: Copyright &copy; 2026 Shivang Rawat. MIT License.
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - content.code.copy
+    - search.highlight
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.details
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - pymdownx.snippets:
+      base_path: ["."]
+      check_paths: true
+
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+
+plugins:
+  - search
+  - mkdocs-jupyter:
+      include: ["tutorials/*.ipynb"]
+      execute: false
+      include_source: true
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: ["."]
+          options:
+            docstring_style: google
+            show_source: false
+            show_root_heading: true
+            show_root_full_path: false
+            heading_level: 3
+            members_order: source
+            separate_signature: true
+            show_signature_annotations: false
+
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - Quick start: quickstart.md
+  - Concepts: concepts.md
+  - Covariance functions: covariances.md
+  - Estimating from data: estimation.md
+  - Tutorials:
+      - Overview: tutorials/README.md
+      - Quick start: tutorials/01_quickstart.ipynb
+      - Your own covariance: tutorials/02_custom_covariance.ipynb
+      - From data to a Fano factor: tutorials/03_fano_from_data.ipynb
+      - Telling models apart: tutorials/04_model_discrimination.ipynb
+  - Numerical methods: numerics.md
+  - API reference: api.md
+  - Reproducing the paper: reproducibility.md
+  - Citation: citation.md
+  - Changelog: changelog.md

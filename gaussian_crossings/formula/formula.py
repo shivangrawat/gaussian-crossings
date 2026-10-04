@@ -10,7 +10,7 @@ Martiniani (2026) and involve the error function and Owen's T function.
 
 import math
 import warnings
-from typing import Any, Callable, Optional, Tuple, Union
+from typing import Any, Callable, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import torch
@@ -19,6 +19,11 @@ from torch.func import grad
 from gaussian_crossings.utils.owensT import owensT
 
 from .integration import adaptive_fano
+
+#: One threshold or an array of thresholds.
+Threshold = Union[float, Sequence[float], np.ndarray, torch.Tensor]
+#: A float for a scalar threshold, otherwise a NumPy array.
+Statistic = Union[float, np.ndarray]
 
 
 class NumericalIntegrationWarning(RuntimeWarning):
@@ -173,7 +178,7 @@ class GaussianUpCrossings:
         array = np.asarray(value, dtype=float)
         return float(array) if array.ndim == 0 else array
 
-    def mean_rate(self, u=None, kind: str = "up"):
+    def mean_rate(self, u: Optional[Threshold] = None, kind: str = "up") -> Statistic:
         """Mean number of crossings per unit time (Kac-Rice formula).
 
         Args:
@@ -185,7 +190,7 @@ class GaussianUpCrossings:
         """
         return self._to_numpy(self._statistic("mean_rate", kind)(u=self._threshold(u)))
 
-    def mean(self, T: float, u=None, kind: str = "up"):
+    def mean(self, T: float, u: Optional[Threshold] = None, kind: str = "up") -> Statistic:
         """Mean number of crossings in a window of length ``T``.
 
         Args:
@@ -198,7 +203,13 @@ class GaussianUpCrossings:
         """
         return self._to_numpy(self._statistic("mean", kind)(T, u=self._threshold(u)))
 
-    def variance(self, T: float, u=None, kind: str = "up", **integration_options):
+    def variance(
+        self,
+        T: float,
+        u: Optional[Threshold] = None,
+        kind: str = "up",
+        **integration_options: Any,
+    ) -> Statistic:
         """Variance of the number of crossings in a window of length ``T``.
 
         Args:
@@ -214,7 +225,9 @@ class GaussianUpCrossings:
         statistic = self._statistic("variance", kind)
         return self._to_numpy(statistic(T, u=self._threshold(u), **integration_options))
 
-    def variance_rate(self, u=None, kind: str = "up", **integration_options):
+    def variance_rate(
+        self, u: Optional[Threshold] = None, kind: str = "up", **integration_options: Any
+    ) -> Statistic:
         """Long-time variance per unit time, ``lim Var[N(T)] / T`` as ``T`` grows.
 
         Args:
@@ -230,8 +243,12 @@ class GaussianUpCrossings:
         return self._to_numpy(statistic(u=self._threshold(u), **integration_options))
 
     def fano_factor(
-        self, u=None, T: Optional[float] = None, kind: str = "up", **integration_options
-    ):
+        self,
+        u: Optional[Threshold] = None,
+        T: Optional[float] = None,
+        kind: str = "up",
+        **integration_options: Any,
+    ) -> Statistic:
         """Fano factor ``Var[N] / E[N]`` of crossing counts.
 
         With ``T=None`` this is the long-time limit. With a finite ``T`` it is

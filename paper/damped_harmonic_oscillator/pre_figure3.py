@@ -3,7 +3,7 @@
 The experiment fixes omega0 = temperature = 1, T = 120. Exact stationary
 Gaussian state transitions replace the original unvalidated FFT embedding.
 All three thresholds and nested sampling grids use the same trial paths.
-Run `python examples/damped_harmonic_oscillator/pre_figure3.py --help`.
+Run `python paper/damped_harmonic_oscillator/pre_figure3.py --help`.
 Outputs live in the ignored data/pre_figure3 directory; no paths are discarded
 or rerun based on agreement with theory. NumPy/SciPy are the only numerical
 dependencies. See README.md for the run and validation protocol.

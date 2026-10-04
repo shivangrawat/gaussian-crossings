@@ -76,9 +76,9 @@ def simulate_gaussian_process_cholesky(
     r: Callable[..., torch.Tensor],
     T: float,
     dt: float,
+    *args: Any,
     jitter: float = 1e-10,
     max_attempts: int = 5,
-    *args: Any,
     **kwargs: Any,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """Sample from the finite Toeplitz covariance in O(n^3) time/O(n^2) space.
@@ -86,7 +86,10 @@ def simulate_gaussian_process_cholesky(
     The first factorization uses the exact covariance. Failed attempts retry
     with diagonal jitter, beginning at ``jitter`` and increasing tenfold.
     Jitter changes the covariance by the stated diagonal increment. The
-    time grid and callback conventions match the FFT sampler.
+    time grid and callback conventions match the FFT sampler: extra positional
+    and keyword arguments are passed to the covariance callback. ``jitter``
+    and ``max_attempts`` are keyword-only so they cannot capture covariance
+    parameters.
     """
     t = _time_grid(T, dt)
     if not math.isfinite(jitter) or jitter < 0:

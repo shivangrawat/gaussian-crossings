@@ -22,9 +22,13 @@ from gaussian_crossings.process import (
     r_squared_exp,
 )
 
+pytestmark = pytest.mark.filterwarnings(
+    "ignore:GaussianUpCrossingsDimless.*is deprecated:DeprecationWarning"
+)
+
 ROOT = Path(__file__).resolve().parents[1]
 REF = json.loads((ROOT / "tests/fixtures/paper_reference.json").read_text())
-SPEC = importlib.util.spec_from_file_location("reference_pre", ROOT / "examples/pre_figures.py")
+SPEC = importlib.util.spec_from_file_location("reference_pre", ROOT / "paper/pre_figures.py")
 PRE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(PRE)
 
@@ -202,6 +206,18 @@ def test_invalid_options_and_nondifferentiable_path():
     level = torch.tensor(0.5, dtype=torch.float64, requires_grad=True)
     result = model.upcrossing_variance(2.0, u=level, method="trapezoid", epsilon_left=0.01)
     assert torch.isfinite(torch.autograd.grad(result, level)[0])
+
+
+def test_rq_tail_condition_depends_on_the_threshold():
+    # The tail of the integrand starts with u**2 r(t) ~ t**(-2 alpha); at u = 0 that term
+    # vanishes and the next one, r(t)**2 ~ t**(-4 alpha), needs only alpha > 1/4.
+    model = GaussianUpCrossings(r_rational_quadratic, sigma=1.0, tau=1.0, alpha=0.4)
+    assert math.isfinite(model.fano_factor(0.0))
+    with pytest.raises(ValueError, match="diverges"):
+        model.fano_factor(1.0)
+    shallow = GaussianUpCrossings(r_rational_quadratic, sigma=1.0, tau=1.0, alpha=0.25)
+    with pytest.raises(ValueError, match="diverges"):
+        shallow.fano_factor(0.0)
 
 
 def test_nonintegrable_rq_tail_is_rejected():

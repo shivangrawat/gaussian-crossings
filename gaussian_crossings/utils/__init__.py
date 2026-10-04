@@ -3,7 +3,6 @@
 from .owensT import OwensT, owensT
 from .simulation import simulate_gaussian_process_cholesky, simulate_gaussian_process_fft
 from .utils import (
-    MidpointNormalize,
     autocorrelation,
     count_crossings,
     count_downcrossings,
@@ -21,7 +20,6 @@ __all__ = [
     "owensT",
     "simulate_gaussian_process_cholesky",
     "simulate_gaussian_process_fft",
-    "MidpointNormalize",
     "autocorrelation",
     "count_crossings",
     "count_downcrossings",
@@ -33,3 +31,12 @@ __all__ = [
     "euler_maruyama_upcrossings",
     "upcrossing_times",
 ]
+
+
+def __getattr__(name):
+    # Plotting helpers live in gaussian_crossings.plotting (optional matplotlib).
+    if name == "MidpointNormalize":
+        from gaussian_crossings.plotting import MidpointNormalize
+
+        return MidpointNormalize
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

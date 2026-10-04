@@ -1,7 +1,7 @@
 # PRE revision archive
 
-Release `pre-revision-2026-09-27` includes the saved numerical inputs for
-Figures 2–6 of the revised manuscript. `pre_revision_data.zip` contains the
+This directory (and the tag `pre-revision-2026-09-27`) holds the saved numerical
+inputs for Figures 2–6 of the revised manuscript. `pre_revision_data.zip` contains the
 analytical arrays, all 50,000 trajectories' crossing counts and covariance
 probes, the Figure 3 bootstrap summary, and the original source snapshots.
 It does not store full sampled trajectories. The original numerical
@@ -12,8 +12,8 @@ From the repository root:
 
 ```sh
 uv sync --all-extras --locked
-uv run python examples/restore_pre_archive.py
-uv run python examples/pre_figures.py plot \
+uv run python paper/restore_pre_archive.py
+uv run python paper/pre_figures.py plot \
   --output data/pre_figures_20260927 --figures figures/publication
 ```
 
@@ -36,4 +36,4 @@ The current renderer also exports alternative illustrations for Figure 1
 and Supplemental Figure S1. The submitted revision retains the original
 illustrations; only Figures 2–6 are covered by this numerical archive.
 Recalculation and new simulations are described in
-[the reproduction guide](../docs/reproducibility.md).
+[the reproduction guide](../../docs/reproducibility.md).

@@ -13,6 +13,10 @@ from gaussian_crossings import GaussianUpCrossings, GaussianUpCrossingsDimless
 from gaussian_crossings.process import r_damped_harmonic_oscillator_noise, r_OU, r_squared_exp
 from gaussian_crossings.utils import owensT
 
+pytestmark = pytest.mark.filterwarnings(
+    "ignore:GaussianUpCrossingsDimless.*is deprecated:DeprecationWarning"
+)
+
 
 @pytest.mark.parametrize("zeta", [0.5, 1.0, 2.0])
 @pytest.mark.parametrize("level", [-2.0, 0.0, 0.5, 2.0])

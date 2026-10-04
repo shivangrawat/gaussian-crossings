@@ -32,17 +32,17 @@ from scipy.special import beta, betainc, erf, erfc, ndtr, owens_t
 
 ROOT = Path(__file__).resolve().parents[1]
 NOTEBOOKS = {
-    '1': 'examples/fig1_illustration.ipynb',
-    '2': 'examples/damped_harmonic_oscillator/sdho_zeta.ipynb',
-    '3': 'examples/damped_harmonic_oscillator/theory_simulation_upcrossings.ipynb',
-    '4a-c': 'examples/damped_harmonic_oscillator/fano_scan_omega0.ipynb',
-    '4d-f': 'examples/damped_harmonic_oscillator/fano_scan_temp.ipynb',
-    '5': 'examples/OU_noise/OU_noise.ipynb',
-    '6': 'examples/rational_quadratic/rational_quadratic.ipynb',
+    '1': 'paper/fig1_illustration.ipynb',
+    '2': 'paper/damped_harmonic_oscillator/sdho_zeta.ipynb',
+    '3': 'paper/damped_harmonic_oscillator/theory_simulation_upcrossings.ipynb',
+    '4a-c': 'paper/damped_harmonic_oscillator/fano_scan_omega0.ipynb',
+    '4d-f': 'paper/damped_harmonic_oscillator/fano_scan_temp.ipynb',
+    '5': 'paper/OU_noise/OU_noise.ipynb',
+    '6': 'paper/rational_quadratic/rational_quadratic.ipynb',
     'S1': None,
 }
 SPEC = importlib.util.spec_from_file_location(
-    'pre_figure3', ROOT / 'examples/damped_harmonic_oscillator/pre_figure3.py')
+    'pre_figure3', ROOT / 'paper/damped_harmonic_oscillator/pre_figure3.py')
 fig3 = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(fig3)
 PI = math.pi

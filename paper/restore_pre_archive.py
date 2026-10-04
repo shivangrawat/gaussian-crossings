@@ -10,8 +10,8 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def restore(destination, verify_only=False):
-    manifest = json.loads((ROOT / "reproduction/manifest.json").read_text())
-    archive = ROOT / "reproduction" / manifest["archive"]
+    manifest = json.loads((ROOT / "paper/reproduction/manifest.json").read_text())
+    archive = ROOT / "paper/reproduction" / manifest["archive"]
     if hashlib.sha256(archive.read_bytes()).hexdigest() != manifest["archive_sha256"]:
         raise ValueError("Published archive checksum mismatch")
     pending = []

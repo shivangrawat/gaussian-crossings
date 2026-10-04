@@ -33,5 +33,42 @@ jobs:
         run: python -m pytest -m 'not reproduction'
       - name: Build wheel and source distribution
         run: |
-          python -m pip install build
+          python -m pip install build twine
           python -m build --outdir build/dist
+          python -m twine check --strict build/dist/*
+
+  tutorials:
+    runs-on: ubuntu-latest
+    env:
+      OMP_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      MPLCONFIGDIR: ${{ github.workspace }}/build/matplotlib
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install CPU PyTorch
+        run: python -m pip install 'torch>=2.0' --index-url https://download.pytorch.org/whl/cpu
+      - name: Install package with notebook tools
+        run: python -m pip install -e '.[notebooks]'
+      - name: Execute tutorials
+        run: |
+          python - <<'EOF'
+          import pathlib
+
+          import nbformat
+          from nbclient import NotebookClient
+
+          for path in sorted(pathlib.Path("examples").glob("*.ipynb")):
+              notebook = nbformat.read(path, as_version=4)
+              client = NotebookClient(
+                  notebook,
+                  timeout=900,
+                  kernel_name="python3",
+                  resources={"metadata": {"path": "examples"}},
+              )
+              client.execute()
+              print("executed", path)
+          EOF

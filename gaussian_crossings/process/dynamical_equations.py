@@ -15,7 +15,7 @@ import torch
 from gaussian_crossings.utils.utils import dynm_fun
 
 
-class filtered_OU:
+class FilteredOU:
     """Filtered Ornstein-Uhlenbeck process model.
 
     This class represents an OU process x(t) that has been passed through a
@@ -89,11 +89,11 @@ class filtered_OU:
         return torch.tensor([0.0, 0.0], dtype=torch.float64)
 
 
-class OU_noise:
-    """Mean-reverting process driven by Ornstein-Uhlenbeck noise (Section IV.B).
+class OUNoise:
+    """Mean-reverting process driven by Ornstein-Uhlenbeck noise.
 
-    This class represents the two-dimensional system from Section IV.B of
-    the paper, where a mean-reverting process y(t) is driven by an OU
+    This class represents the two-dimensional system studied in
+    the accompanying paper, where a mean-reverting process y(t) is driven by an OU
     process x(t).  The ratio kappa = tau_f / tau_e controls how filtered
     the noise appears to the system and determines the crossing statistics.
 
@@ -164,8 +164,8 @@ class OU_noise:
         return torch.tensor([0.0, 0.0], dtype=torch.float64)
 
 
-class damped_harmonic_oscillator_noise:
-    """Stochastic damped harmonic oscillator model (Section IV.A of the paper).
+class DampedHarmonicOscillatorNoise:
+    """Stochastic damped harmonic oscillator model.
 
     This class represents a damped harmonic oscillator driven by thermal
     white noise, following the Langevin equation:
@@ -248,3 +248,9 @@ class damped_harmonic_oscillator_noise:
             Tensor of shape (2,) containing the equilibrium state [0, 0].
         """
         return torch.tensor([0.0, 0.0], dtype=torch.float64)
+
+
+# Lowercase names retained for backward compatibility.
+filtered_OU = FilteredOU
+OU_noise = OUNoise
+damped_harmonic_oscillator_noise = DampedHarmonicOscillatorNoise

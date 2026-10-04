@@ -15,6 +15,7 @@ Typical use::
     model.fano_factor(u=0.5, T=100.0)  # Fano factor of counts in windows of length 100
 """
 
+from .estimation import CoarseSamplingWarning, FanoEstimate, empirical_fano, windowed_counts
 from .formula import (
     GaussianCrossings,
     GaussianUpCrossings,
@@ -27,6 +28,10 @@ __version__ = "0.1.0"
 __all__ = [
     "GaussianCrossings",
     "GaussianUpCrossings",
+    "empirical_fano",
+    "windowed_counts",
+    "FanoEstimate",
+    "CoarseSamplingWarning",
     "NumericalIntegrationWarning",
     "IntegrationInfo",
 ]

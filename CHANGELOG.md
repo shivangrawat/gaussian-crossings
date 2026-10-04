@@ -35,6 +35,10 @@ All notable changes to this project are documented here. The project follows
 
 - The overdamped oscillator covariance lost precision near critical damping, and long-time Fano
   factors failed for damping ratios such as `1 + 1e-12`.
+- With `method="trapezoid"`, the original variance and Fano methods broadcast an array of
+  thresholds against the integration grid: they raised a shape error or, for arrays as long as the
+  grid, returned incorrect values. They now raise `ValueError` for more than one threshold, and
+  the new methods evaluate the thresholds one at a time.
 
 ### Deprecated
 

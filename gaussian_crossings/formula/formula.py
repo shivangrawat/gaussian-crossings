@@ -178,6 +178,17 @@ class GaussianUpCrossings:
         array = np.asarray(value, dtype=float)
         return float(array) if array.ndim == 0 else array
 
+    def _integrated(self, name: str, kind: str, u, options: dict, *args) -> Statistic:
+        """Evaluate an integrated statistic for one threshold or an array of thresholds."""
+        statistic = self._statistic(name, kind)
+        level = self._threshold(u)
+        if level.ndim > 0 and self._integration_method(options) == "trapezoid":
+            # The fixed-grid rule broadcasts the threshold against its integration grid,
+            # so it evaluates one threshold per call.
+            values = [statistic(*args, u=value, **options) for value in level.reshape(-1)]
+            return self._to_numpy(torch.stack(values).reshape(level.shape))
+        return self._to_numpy(statistic(*args, u=level, **options))
+
     def mean_rate(self, u: Optional[Threshold] = None, kind: str = "up") -> Statistic:
         """Mean number of crossings per unit time (Kac-Rice formula).
 
@@ -222,8 +233,7 @@ class GaussianUpCrossings:
         Returns:
             A float for a scalar threshold, otherwise a NumPy array.
         """
-        statistic = self._statistic("variance", kind)
-        return self._to_numpy(statistic(T, u=self._threshold(u), **integration_options))
+        return self._integrated("variance", kind, u, integration_options, T)
 
     def variance_rate(
         self, u: Optional[Threshold] = None, kind: str = "up", **integration_options: Any
@@ -239,8 +249,7 @@ class GaussianUpCrossings:
         Returns:
             A float for a scalar threshold, otherwise a NumPy array.
         """
-        statistic = self._statistic("variance_CLT_per_unit_time", kind)
-        return self._to_numpy(statistic(u=self._threshold(u), **integration_options))
+        return self._integrated("variance_CLT_per_unit_time", kind, u, integration_options)
 
     def fano_factor(
         self,
@@ -269,14 +278,8 @@ class GaussianUpCrossings:
             A float for a scalar threshold, otherwise a NumPy array.
         """
         if T is None:
-            value = self._statistic("fano_factor_CLT", kind)(
-                u=self._threshold(u), **integration_options
-            )
-        else:
-            value = self._statistic("fano_factor", kind)(
-                T, u=self._threshold(u), **integration_options
-            )
-        return self._to_numpy(value)
+            return self._integrated("fano_factor_CLT", kind, u, integration_options)
+        return self._integrated("fano_factor", kind, u, integration_options, T)
 
     def r(self, t: torch.Tensor) -> torch.Tensor:
         """Evaluate the correlation function r at the given time(s).
@@ -721,6 +724,12 @@ class GaussianUpCrossings:
         self.last_integration_info = None
         if u is None:
             u = self.u
+        if torch.as_tensor(u).numel() != 1:
+            raise ValueError(
+                "method='trapezoid' evaluates one threshold per call. Pass a scalar u, use the "
+                "default adaptive method, or use variance/variance_rate/fano_factor, which "
+                "evaluate an array of thresholds one at a time."
+            )
         if not isinstance(num_points, int) or isinstance(num_points, bool) or num_points < 2:
             raise ValueError("num_points must be an integer of at least 2")
         if not 0 < epsilon_left < 1 or not 0 <= epsilon_right < 1:

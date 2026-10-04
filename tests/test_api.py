@@ -82,3 +82,45 @@ def test_deprecated_classes_warn_but_still_work(name):
         legacy = cls(r_squared_exp, u=0.5, sigma=1.0, tau=2.0)
     current = GaussianCrossings(r_squared_exp, u=0.5, sigma=1.0, tau=2.0)
     assert float(legacy.upcrossing_mean_rate()) == pytest.approx(current.mean_rate())
+
+
+TRAPEZOID_WARNING = "ignore::gaussian_crossings.formula.formula.NumericalIntegrationWarning"
+
+
+@pytest.mark.filterwarnings(TRAPEZOID_WARNING)
+@pytest.mark.parametrize("n_levels", [3, 40])
+def test_trapezoid_array_thresholds_match_separate_calls(n_levels):
+    # 40 equals num_points below: the length at which thresholds used to be mixed with the
+    # integration grid instead of raising a shape error.
+    model = GaussianCrossings(r_squared_exp, sigma=1.0, tau=1.0)
+    options = dict(method="trapezoid", num_points=40)
+    levels = np.linspace(0.0, 2.0, n_levels)
+    calls = {
+        "long-time Fano": lambda u: model.fano_factor(u, **options),
+        "windowed Fano": lambda u: model.fano_factor(u, T=30.0, **options),
+        "variance": lambda u: model.variance(30.0, u, **options),
+        "variance rate": lambda u: model.variance_rate(u, **options),
+        "total Fano": lambda u: model.fano_factor(u, kind="total", **options),
+    }
+    for label, call in calls.items():
+        together = call(levels)
+        assert together.shape == levels.shape, label
+        separate = np.array([call(float(level)) for level in levels])
+        np.testing.assert_allclose(together, separate, rtol=1e-12, err_msg=label)
+
+
+@pytest.mark.filterwarnings(TRAPEZOID_WARNING)
+def test_trapezoid_preserves_threshold_array_shape():
+    model = GaussianCrossings(r_squared_exp, sigma=1.0, tau=1.0)
+    levels = np.array([[0.0, 0.5], [1.0, 1.5]])
+    values = model.fano_factor(levels, method="trapezoid", num_points=40)
+    assert values.shape == (2, 2)
+    assert values[1, 0] == pytest.approx(model.fano_factor(1.0, method="trapezoid", num_points=40))
+
+
+def test_original_trapezoid_methods_reject_threshold_arrays():
+    model = GaussianCrossings(r_squared_exp, sigma=1.0, tau=1.0)
+    with pytest.raises(ValueError, match="one threshold per call"):
+        model.upcrossing_fano_factor_CLT(u=torch.tensor([0.0, 1.0]), method="trapezoid")
+    with pytest.raises(ValueError, match="one threshold per call"):
+        model.crossing_variance(10.0, u=torch.linspace(0, 1, 1000), method="trapezoid")

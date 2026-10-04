@@ -208,6 +208,18 @@ def test_invalid_options_and_nondifferentiable_path():
     assert torch.isfinite(torch.autograd.grad(result, level)[0])
 
 
+def test_rq_tail_condition_depends_on_the_threshold():
+    # The tail of the integrand starts with u**2 r(t) ~ t**(-2 alpha); at u = 0 that term
+    # vanishes and the next one, r(t)**2 ~ t**(-4 alpha), needs only alpha > 1/4.
+    model = GaussianUpCrossings(r_rational_quadratic, sigma=1.0, tau=1.0, alpha=0.4)
+    assert math.isfinite(model.fano_factor(0.0))
+    with pytest.raises(ValueError, match="diverges"):
+        model.fano_factor(1.0)
+    shallow = GaussianUpCrossings(r_rational_quadratic, sigma=1.0, tau=1.0, alpha=0.25)
+    with pytest.raises(ValueError, match="diverges"):
+        shallow.fano_factor(0.0)
+
+
 def test_nonintegrable_rq_tail_is_rejected():
     model = GaussianUpCrossings(r_rational_quadratic, sigma=1.0, tau=1.0, alpha=0.5, u=1.0)
     with pytest.raises(ValueError, match="diverges"):

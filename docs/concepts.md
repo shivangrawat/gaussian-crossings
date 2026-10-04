@@ -88,7 +88,9 @@ The results hold for a stationary Gaussian process that is
   so that the variance is finite. All built-in smooth covariances satisfy it;
 - **nondegenerate**: $(X_0, X_t, \dot X_0, \dot X_t)$ has a nonsingular covariance for $t \neq 0$.
 
-Long-time results additionally need the correlations to decay: $r$, $r'$, and $r''$ must be
-integrable at large lags. The rational-quadratic covariance decays as $|t|^{-2\alpha}$ and
-qualifies only for $\alpha > 1/2$; the package raises an error otherwise. Finite-window results do
-not need this condition.
+Long-time results additionally need the correlations to decay quickly enough. It suffices that
+$r$, $r'$, and $r''$ are integrable at large lags. The rational-quadratic covariance decays as
+$|t|^{-2\alpha}$, so $\alpha > 1/2$ gives finite long-time results at every threshold. At the mean
+level $u = 0$ the leading tail term, proportional to $u^2 r(t)$, vanishes, and $\alpha > 1/4$
+suffices. The package raises an error when the tail integral diverges. Finite-window results do
+not need these conditions.

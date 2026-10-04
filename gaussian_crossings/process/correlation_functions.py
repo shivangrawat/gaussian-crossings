@@ -228,8 +228,10 @@ def r_rational_quadratic(
     The rational quadratic kernel can be seen as an infinite mixture of
     squared exponential kernels with different length scales.  As alpha -> inf,
     it converges to the squared exponential kernel.  Its covariance decays as
-    |t|^(-2 alpha), so the long-time crossing variance is finite only for
-    alpha > 1/2; smaller alpha means heavier-tailed, longer-range correlations.
+    |t|^(-2 alpha); smaller alpha means heavier-tailed, longer-range
+    correlations.  The long-time crossing variance is finite at every
+    threshold for alpha > 1/2.  At the mean level u = 0 the leading tail
+    term, proportional to u^2 r(t), vanishes and alpha > 1/4 suffices.
 
     Args:
         t: Time lag(s) at which to evaluate the autocorrelation.

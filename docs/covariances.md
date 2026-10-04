@@ -19,7 +19,7 @@ Parameters are passed by name and forwarded to the covariance function. Unknown 
 | `r_damped_harmonic_oscillator_noise` | `temp`, `omega0`, `zeta` | `temp / omega0**2` | Yes, every `zeta > 0` |
 | `r_OU_noise` | `sigma`, `tau`, `kappa` | `sigma**2 * kappa / (1 + kappa)` | Yes, `kappa != 1` |
 | `r_filtered_OU` | `sigma`, `tau`, `kappa` | `sigma**2 / (1 + kappa)` | Yes, `kappa != 1` |
-| `r_rational_quadratic` | `sigma`, `tau`, `alpha` | `sigma**2` | Yes; long-time results need `alpha > 1/2` |
+| `r_rational_quadratic` | `sigma`, `tau`, `alpha` | `sigma**2` | Yes; long-time results need `alpha > 1/2` (`alpha > 1/4` suffices at `u = 0`) |
 | `r_squared_exp` | `sigma`, `tau` | `sigma**2` | Yes |
 | `r_matern` | `sigma`, `tau`, `nu` | `sigma**2` | Only `nu = 1.5` and `2.5` |
 | `r_OU` | `sigma`, `tau` | `sigma**2` | No: paths are not differentiable (simulation only) |
@@ -70,7 +70,7 @@ thresholds in one call rather than in a loop. See
 | Process is not smooth (for example `r_OU`) | `ValueError: -r''(0) must be a finite positive scalar ...` |
 | Covariance written with NumPy | `TypeError: The covariance callback returned ... It must be written with PyTorch operations ...` |
 | Misspelled parameter | `TypeError: ... got an unexpected keyword argument ...` |
-| Rational-quadratic `alpha <= 1/2`, long-time result | `ValueError: The long-time crossing variance diverges ...` |
+| Rational-quadratic long-time result whose tail diverges (`alpha <= 1/2` with `u != 0`, or `alpha <= 1/4` at `u = 0`) | `ValueError: The long-time crossing variance diverges ...` |
 
 ## Linear stochastic models
 

@@ -168,8 +168,16 @@ def _fano(counts: np.ndarray) -> np.ndarray:
 
 
 def _check_sampling(values, levels, direction, tolerance, stacklevel):
-    detected = np.array([_indicators(values, level, direction).sum() for level in levels])
-    halved = np.array([_indicators(values[:, ::2], level, direction).sum() for level in levels])
+    # Compare the same observation span: every second sample, ending on the last even
+    # index, against the full-rate samples up to that index. With an even number of
+    # samples, the final full-rate interval has no coarse counterpart and is left out.
+    span = 2 * ((values.shape[1] - 1) // 2)
+    if span < 2:  # fewer than two coarse samples per series: nothing to compare
+        return
+    fine = values[:, : span + 1]
+    coarse = fine[:, ::2]
+    detected = np.array([_indicators(fine, level, direction).sum() for level in levels])
+    halved = np.array([_indicators(coarse, level, direction).sum() for level in levels])
     with np.errstate(divide="ignore", invalid="ignore"):
         lost = np.where(detected >= 50, 1 - halved / detected, 0.0)
     worst = float(np.max(lost))

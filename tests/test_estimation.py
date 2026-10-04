@@ -101,6 +101,26 @@ def test_coarse_sampling_warning():
         empirical_fano(fine.numpy()[::40], 0.5, window=20.0, dt=0.8, seed=0)
 
 
+def test_sampling_check_ignores_the_unmatched_final_interval():
+    # Even-length series whose only crossing lies in the final interval, which a series of
+    # every second sample cannot cover; it must not count as a missed crossing.
+    x = np.tile([-1.0, -1.0, -1.0, 1.0], (200, 1))
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", CoarseSamplingWarning)
+        estimate = empirical_fano(x, 0.0, window=1.0, dt=1.0, seed=0)
+    assert estimate.n_windows == 600
+    assert estimate.mean == pytest.approx(1 / 3)
+
+
+def test_sampling_check_skips_series_too_short_to_downsample():
+    rng = np.random.default_rng(8)
+    x = rng.normal(size=(500, 2))  # independent two-sample realizations
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", CoarseSamplingWarning)
+        estimate = empirical_fano(x, 0.0, window=1.0, dt=1.0, seed=0)
+    assert estimate.n_windows == 500
+
+
 def test_estimate_agrees_with_finite_window_theory():
     torch.manual_seed(12)
     _, x = simulate_gaussian_process_fft(r_squared_exp, 20000.0, 0.05, sigma=1.0, tau=1.0)
